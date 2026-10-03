@@ -8,3 +8,5 @@ tmp_test.js
 test_*.py
 test_*.js
 test_*.xlsx
+
+.vercel

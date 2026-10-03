@@ -20962,24 +20962,13 @@ function getCurrentUser() {
   if (userJson) {
     try {
       const u = JSON.parse(userJson);
-      if (u && u.role) {
-        const roleKey = u.role.toLowerCase();
-        if (USER_ACCOUNTS[roleKey]) {
-          return USER_ACCOUNTS[roleKey];
+      if (u && u.username && u.role) {
+        if (!u.allowedTabs) {
+          u.allowedTabs = u.role === "OPERATOR" ? ["entry"] : (u.role === "SUPERVISOR" ? ["entry", "kpi", "logs", "all"] : ["entry", "kpi", "logs", "all", "settings"]);
         }
-      }
-      if (u && u.username) {
-        for (const k of Object.keys(USER_ACCOUNTS)) {
-          if (USER_ACCOUNTS[k].username.toLowerCase() === u.username.toLowerCase()) {
-            return USER_ACCOUNTS[k];
-          }
-        }
+        return u;
       }
     } catch (e) {}
-  }
-  // Fallback for legacy login
-  if (localStorage.getItem("YOKOHAMA_ADMIN_LOGGED_IN") === "true") {
-    return USER_ACCOUNTS.admin;
   }
   return null;
 }
@@ -22382,6 +22371,10 @@ window.handleUpdateUserAccount = async function(e, roleKey) {
 
   saveUserAccountsToStorage();
 
+  if (typeof window.updateCloudUserAccount === "function") {
+    window.updateCloudUserAccount(acc.role, acc.username, acc.displayName, acc.passwordHash).catch(e => console.warn("[Supabase] Cloud user sync warning:", e));
+  }
+
   // If the updated user is currently logged in, sync session
   const currentUser = getCurrentUser();
   if (currentUser && currentUser.role === acc.role) {
@@ -23656,6 +23649,7 @@ function handleFormSubmit(e) {
       downtimeRecords[index] = {
         ...downtimeRecords[index],
         issueDate,
+        date: issueDate,
         nature,
         area: finalArea,
         process: finalProcess,
@@ -23671,6 +23665,7 @@ function handleFormSubmit(e) {
         responsibility,
         closedDate: status === "Completed" ? (closedDate || issueDate) : "",
         solvedBy,
+        responsiblePerson: solvedBy,
         status,
         remarks,
         updatedAt: new Date().toISOString()
@@ -23688,6 +23683,7 @@ function handleFormSubmit(e) {
     const newRecord = {
       id: newId,
       issueDate,
+      date: issueDate,
       nature,
       area: finalArea,
       process: finalProcess,
@@ -23703,6 +23699,7 @@ function handleFormSubmit(e) {
       responsibility,
       closedDate: status === "Completed" ? (closedDate || issueDate) : "",
       solvedBy,
+      responsiblePerson: solvedBy,
       status,
       remarks,
       createdAt: new Date().toISOString()
@@ -24828,6 +24825,9 @@ window.deleteRecord = function(id) {
     downtimeRecords = downtimeRecords.filter(r => r.id !== id);
     window.downtimeRecords = downtimeRecords;
     saveToStorage();
+    if (typeof window.deleteCloudIncident === "function") {
+      window.deleteCloudIncident(id).catch(e => console.warn("[Supabase] Cloud delete warning:", e));
+    }
     renderRecordsTable();
     renderKPIs();
     renderCharts();
@@ -24857,6 +24857,9 @@ window.clearAllIncidentLogs = function() {
     downtimeRecords = [];
     window.downtimeRecords = downtimeRecords;
     saveToStorage();
+    if (typeof window.clearAllCloudIncidents === "function") {
+      window.clearAllCloudIncidents().catch(e => console.warn("[Supabase] Cloud clear warning:", e));
+    }
     renderRecordsTable();
     renderKPIs();
     renderCharts();

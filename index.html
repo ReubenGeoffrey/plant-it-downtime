@@ -32,9 +32,14 @@
   <!-- SheetJS for Fallback -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   
-  <!-- Supabase Cloud SDK v2 & Data Layer -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase-client.js"></script>
+  <!-- Supabase Cloud SDK v2 & Data Layer (Local with CDN fallback) -->
+  <script src="supabase.min.js"></script>
+  <script>
+    if (typeof supabase === "undefined") {
+      document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"><\\/script>');
+    }
+  </script>
+  <script src="supabase-client.js?v=2.1"></script>
   
   <!-- Custom Yokohama Theme Stylesheet -->
   <link rel="stylesheet" href="styles.css?v=2.2">
@@ -1941,7 +1946,7 @@
   </footer>
 
   <!-- Application Logic -->
-  <script src="app.js?v=3.7"></script>
+  <script src="app.js?v=3.8"></script>
 
   <!-- =========================================================================
        MODAL: EXPORT REPORT BY DATE OR MONTH (EXECUTIVE EXCEL & CSV)
