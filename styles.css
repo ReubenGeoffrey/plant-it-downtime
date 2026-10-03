@@ -1,0 +1,446 @@
+/* ==========================================================================
+   YOKOHAMA IT DOWNTIME MANAGEMENT SYSTEM - MODERN THEME STYLESHEET
+   Brand Palette: Yokohama Crimson Red (#E60012), Deep Black (#0F1115), Crisp White (#FFFFFF)
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  --yoko-red: #E60012;
+  --yoko-red-dark: #B3000E;
+  --yoko-red-light: #FF2B3C;
+  --yoko-red-subtle: #FFF1F2;
+  --yoko-black: #0F1115;
+  --yoko-black-light: #1A1D23;
+  --yoko-gray-900: #1E222A;
+  --yoko-gray-800: #2D333F;
+  --yoko-gray-700: #4B5563;
+  --yoko-gray-500: #6B7280;
+  --yoko-gray-300: #D1D5DB;
+  --yoko-gray-100: #F3F4F6;
+  --yoko-gray-50: #F9FAFB;
+  --yoko-white: #FFFFFF;
+  --yoko-green: #10B981;
+  --yoko-green-bg: #ECFDF5;
+  --yoko-amber: #F59E0B;
+  --yoko-amber-bg: #FFFBEB;
+  --yoko-blue: #2563EB;
+  --yoko-blue-bg: #EFF6FF;
+
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+  --shadow-yoko: 0 10px 25px -5px rgba(230, 0, 18, 0.25);
+}
+
+* {
+  box-sizing: border-box;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+body {
+  background-color: #F8FAFC;
+  color: #1E293B;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Yokohama Racing Stripe & Brand Accents */
+.yoko-stripe {
+  background: linear-gradient(90deg, #E60012 0%, #E60012 35%, #0F1115 35%, #0F1115 100%);
+  height: 4px;
+}
+
+.yoko-badge-stripe {
+  position: relative;
+  overflow: hidden;
+}
+
+.yoko-badge-stripe::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: #E60012;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F1F5F9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* Navigation Tabs */
+.tab-btn {
+  padding: 0.55rem 1.15rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  color: #64748B;
+  background: transparent;
+  text-decoration: none;
+}
+
+.tab-btn:hover {
+  color: #0F1115;
+  background: #F1F5F9;
+}
+
+.tab-btn.active-tab {
+  background: #0F1115;
+  color: #FFFFFF;
+  border-color: #0F1115;
+  box-shadow: 0 4px 14px rgba(15, 17, 21, 0.2);
+}
+
+.tab-btn.active-tab-red {
+  background: linear-gradient(135deg, #E60012 0%, #C4000F 100%);
+  color: #FFFFFF;
+  border-color: #E60012;
+  box-shadow: 0 4px 14px rgba(230, 0, 18, 0.35);
+}
+
+/* Glass & Card Effects */
+.card-modern {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.03), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s ease-in-out;
+}
+
+.card-modern:hover {
+  border-color: #CBD5E1;
+}
+
+.card-highlight-red {
+  border-top: 3px solid #E60012;
+}
+
+.card-highlight-black {
+  border-top: 3px solid #0F1115;
+}
+
+/* Input & Form Styling */
+.form-input-modern {
+  width: 100%;
+  background-color: #FFFFFF;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 0.65rem 0.9rem;
+  font-size: 0.925rem;
+  color: #1E293B;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.form-input-modern:focus {
+  border-color: #E60012;
+  box-shadow: 0 0 0 3px rgba(230, 0, 18, 0.12);
+  background-color: #FFFFFF;
+}
+
+.form-input-modern:disabled, .form-input-modern.readonly {
+  background-color: #F8FAFC;
+  color: #64748B;
+  border-color: #E2E8F0;
+  cursor: not-allowed;
+}
+
+.form-label-modern {
+  display: block;
+  font-size: 0.825rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #475569;
+  margin-bottom: 0.35rem;
+}
+
+.form-label-modern .required-star {
+  color: #E60012;
+  margin-left: 2px;
+}
+
+/* Yokohama Red Buttons */
+.btn-yoko-red {
+  background: linear-gradient(135deg, #E60012 0%, #C4000F 100%);
+  color: #FFFFFF;
+  font-weight: 700;
+  border-radius: 10px;
+  padding: 0.7rem 1.5rem;
+  box-shadow: 0 4px 14px 0 rgba(230, 0, 18, 0.35);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-yoko-red:hover {
+  background: linear-gradient(135deg, #FF1A2D 0%, #D40011 100%);
+  box-shadow: 0 6px 20px 0 rgba(230, 0, 18, 0.45);
+  transform: translateY(-1px);
+}
+
+.btn-yoko-red:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 8px 0 rgba(230, 0, 18, 0.3);
+}
+
+/* Yokohama Black Buttons */
+.btn-yoko-black {
+  background: #0F1115;
+  color: #FFFFFF;
+  font-weight: 700;
+  border-radius: 10px;
+  padding: 0.7rem 1.5rem;
+  box-shadow: 0 4px 14px 0 rgba(15, 17, 21, 0.25);
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid #2D333F;
+  cursor: pointer;
+}
+
+.btn-yoko-black:hover {
+  background: #1E222A;
+  transform: translateY(-1px);
+}
+
+/* Yokohama Outline Button */
+.btn-yoko-outline {
+  background: #FFFFFF;
+  color: #334155;
+  font-weight: 600;
+  border-radius: 10px;
+  padding: 0.65rem 1.25rem;
+  border: 1.5px solid #E2E8F0;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.btn-yoko-outline:hover {
+  background: #F8FAFC;
+  border-color: #CBD5E1;
+  color: #0F172A;
+}
+
+/* Segmented Nature Selector */
+.segmented-control {
+  display: flex;
+  background: #F1F5F9;
+  border-radius: 10px;
+  padding: 4px;
+  gap: 4px;
+}
+
+.segmented-option {
+  flex: 1;
+  text-align: center;
+  padding: 8px 12px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.segmented-option.active-infra {
+  background: #FFFFFF;
+  color: #0284C7;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  border-left: 3px solid #0284C7;
+}
+
+.segmented-option.active-mes {
+  background: #FFFFFF;
+  color: #E60012;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  border-left: 3px solid #E60012;
+}
+
+.segmented-option.active-completed {
+  background: #FFFFFF;
+  color: #10B981;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  border-left: 3px solid #10B981;
+}
+
+.segmented-option.active-open {
+  background: #FFFFFF;
+  color: #E60012;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  border-left: 3px solid #E60012;
+}
+
+/* Pulsing Badge for Active Alerts */
+@keyframes pulse-red {
+  0% {
+    box-shadow: 0 0 0 0 rgba(230, 0, 18, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(230, 0, 18, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(230, 0, 18, 0);
+  }
+}
+
+.pulse-red-indicator {
+  animation: pulse-red 2s infinite;
+}
+
+/* Quick Duration Chip */
+.duration-chip {
+  padding: 4px 10px;
+  background: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  font-size: 0.775rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.duration-chip:hover {
+  background: #FFF1F2;
+  border-color: #FECDD3;
+  color: #E60012;
+}
+
+/* Lock Overlay & Restricted Banner */
+.restricted-hero-card {
+  background: linear-gradient(135deg, #0F1115 0%, #1A1D23 100%);
+  border: 1px solid #2D333F;
+  border-top: 4px solid #E60012;
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+  position: relative;
+  overflow: hidden;
+}
+
+.restricted-hero-card::after {
+  content: '';
+  position: absolute;
+  right: -50px;
+  bottom: -50px;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(230, 0, 18, 0.15) 0%, rgba(230, 0, 18, 0) 70%);
+  pointer-events: none;
+}
+
+/* Toast Notifications */
+#toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #0F1115;
+  color: #FFFFFF;
+  padding: 12px 18px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+  border-left: 4px solid #E60012;
+  font-size: 0.9rem;
+  font-weight: 600;
+  min-width: 280px;
+  max-width: 420px;
+  animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.3s ease;
+}
+
+.toast.toast-success {
+  border-left-color: #10B981;
+}
+
+.toast.toast-info {
+  border-left-color: #3B82F6;
+}
+
+.toast.toast-warning {
+  border-left-color: #F59E0B;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Modal Overlay */
+.modal-backdrop {
+  background-color: rgba(15, 17, 21, 0.75);
+  backdrop-filter: blur(6px);
+}
+
+/* Print Styles */
+@media print {
+  body {
+    background: #FFFFFF !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  .card-modern {
+    box-shadow: none !important;
+    border: 1px solid #CBD5E1 !important;
+  }
+}

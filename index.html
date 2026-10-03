@@ -1,0 +1,2197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>IT Downtime Management & Analytics System</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Chart.js for Live Plant Analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <!-- ExcelJS & FileSaver for Rich Premium Styled Excel Export (Local with CDN fallback) -->
+  <script src="exceljs.min.js"></script>
+  <script src="FileSaver.min.js"></script>
+  <script>
+    if (typeof ExcelJS === "undefined") {
+      document.write('<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"><\\/script>');
+    }
+    if (typeof saveAs === "undefined") {
+      document.write('<script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"><\\/script>');
+    }
+  </script>
+  
+  <!-- SheetJS for Fallback -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  
+  <!-- Supabase Cloud SDK v2 & Data Layer -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-client.js"></script>
+  
+  <!-- Custom Yokohama Theme Stylesheet -->
+  <link rel="stylesheet" href="styles.css?v=2.2">
+  
+  <!-- Favicon with new Yokohama Logo -->
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="shortcut icon" href="favicon.ico">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            yoko: {
+              red: '#E60012',
+              'red-dark': '#B3000E',
+              'red-light': '#FF2B3C',
+              black: '#0F1115',
+              'black-light': '#1A1D23',
+              gray: '#1E222A'
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+  
+  <!-- Header Navigation -->
+  <header class="bg-[#0F1115] text-white border-b border-slate-800 sticky top-0 z-40 shadow-lg">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        
+        <!-- Brand Title & New Logo -->
+        <div class="flex items-center gap-3">
+          <img src="logo.png" alt="Yokohama MES Logo" class="h-10 w-auto object-contain rounded-lg bg-white/5 p-1 border border-white/10 shadow-xs">
+          <div>
+            <h1 class="text-xs sm:text-sm font-bold text-slate-200 tracking-wide uppercase">PLANT IT DOWNTIME MANAGEMENT PORTAL</h1>
+            <p class="text-[10px] text-slate-400 font-semibold tracking-wider">YOKOHAMA INDIA • MES SYSTEM</p>
+          </div>
+        </div>
+
+        <!-- Live Shift & Clock Center/Right -->
+        <div class="flex items-center gap-3">
+          <div id="current-shift-badge" class="px-2.5 py-1 rounded-full text-xs font-bold border flex items-center gap-1.5 bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
+            <span class="w-2 h-2 rounded-full bg-current animate-pulse"></span> Shift A (7am - 3pm)
+          </div>
+          
+          <div id="live-clock" class="hidden sm:flex items-center gap-2 text-xs bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-800 font-mono">
+            <span class="text-slate-400">Loading time...</span>
+          </div>
+
+          <!-- Dynamic Auth Button / Logged in User Badge -->
+          <div id="headerAuthAction"></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- =========================================================================
+       ADMIN LOGIN GATEKEEPER (Displayed FIRST For Unauthenticated Users)
+       ========================================================================= -->
+  <section id="adminGatekeeperSection" class="min-h-[calc(100vh-8rem)] flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8 relative border-t-4 border-[#E60012] animate-scale-up">
+      <div class="text-center mb-6">
+        <img src="logo.png" alt="Yokohama MES Logo" class="h-16 w-auto mx-auto mb-3 object-contain drop-shadow">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight uppercase">Plant Portal Sign In</h2>
+        <p class="text-xs text-slate-400 font-medium mt-1">Enter your authorized username &amp; password</p>
+      </div>
+
+      <form id="adminLoginForm" class="space-y-4">
+        <div>
+          <label class="form-label-modern" for="adminUsername">Username</label>
+          <div class="relative">
+            <input type="text" id="adminUsername" required value="" class="form-input-modern pl-9 font-medium" placeholder="Username" autocomplete="username">
+            <i class="fa-solid fa-user absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+          </div>
+        </div>
+
+        <div>
+          <label class="form-label-modern" for="adminPassword">Password</label>
+          <div class="relative">
+            <input type="password" id="adminPassword" required value="" class="form-input-modern pl-9 pr-10 font-medium" placeholder="Enter password" autocomplete="current-password">
+            <i class="fa-solid fa-key absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            <button type="button" onclick="togglePasswordVisibility()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs" title="Toggle password visibility">
+              <i id="togglePassIcon" class="fa-solid fa-eye"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="pt-2">
+          <button type="submit" class="btn-yoko-red w-full py-3 text-sm font-bold shadow-lg flex items-center justify-center gap-2">
+            <i class="fa-solid fa-right-to-bracket"></i>
+            <span>Sign In to Portal</span>
+          </button>
+        </div>
+
+
+      </form>
+    </div>
+  </section>
+
+  <!-- =========================================================================
+       DOWNTIME APPLICATION (Unlocked & Shown After Admin Login)
+       ========================================================================= -->
+  <div id="downtimeAppContainer" class="hidden flex-1 flex flex-col">
+    <!-- Sub-navigation Tabs Bar -->
+    <div class="bg-white border-b border-slate-200 shadow-sm sticky top-16 z-30">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center gap-1.5 overflow-x-auto py-2">
+          <button id="tabBtnEntry" type="button" onclick="switchTab('entry')" class="tab-btn active-tab-red text-xs">
+            <i class="fa-solid fa-pen-to-square mr-1.5"></i> IT DOWN TIME ENTRY
+          </button>
+          <button id="tabBtnKpi" type="button" onclick="switchTab('kpi')" class="tab-btn text-xs">
+            <i class="fa-solid fa-chart-pie mr-1.5"></i> Dashboard
+          </button>
+          <button id="tabBtnLogs" type="button" onclick="switchTab('logs')" class="tab-btn text-xs">
+            <i class="fa-solid fa-table-list mr-1.5"></i> Incident Records
+          </button>
+          <button id="tabBtnAll" type="button" onclick="switchTab('all')" class="tab-btn text-xs">
+            <i class="fa-solid fa-layer-group mr-1.5"></i> Full Overview
+          </button>
+          <button id="tabBtnSettings" type="button" onclick="switchTab('settings')" class="tab-btn text-xs hidden" title="System Master Settings (Admin Only)">
+            <i class="fa-solid fa-sliders text-[#E60012] mr-1.5"></i> Master Settings
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+
+    <!-- =========================================================================
+         TAB 1 VIEW: IT DOWN TIME ENTRY (Always Open)
+         ========================================================================= -->
+    <div id="viewEntryContainer">
+    <section id="form-card" class="card-modern card-highlight-red p-6 sm:p-8 bg-white shadow-xl relative overflow-hidden">
+      
+      <!-- Form Header -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-6 mb-6 border-b border-slate-200 gap-4">
+        <div class="flex items-center gap-4">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="inline-block w-2.5 h-6 bg-[#E60012] rounded-sm"></span>
+              <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight uppercase">
+                IT DOWN TIME ENTRY
+              </h2>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Quick Form Actions -->
+        <div class="flex items-center gap-2 ml-4 sm:ml-0">
+          <button type="button" id="btn-clear-form" class="btn-yoko-outline text-xs py-1.5 px-3 text-amber-700 bg-amber-50 hover:bg-amber-100 border-amber-200">
+            <i class="fa-solid fa-rotate-left text-amber-600"></i> Clear Data
+          </button>
+        </div>
+      </div>
+
+      <!-- Form Inputs Grid -->
+      <form id="downtimeForm" class="space-y-6">
+        
+        <!-- ROW 1: Issue Date, Nature of Issue, Area of Issue, Machine Code -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          
+          <!-- 1. Issue Date -->
+          <div>
+            <label class="form-label-modern" for="issueDate">
+              Issue Date <span class="required-star">*</span>
+            </label>
+            <div class="relative">
+              <input type="date" id="issueDate" name="issueDate" required class="form-input-modern pr-8 font-medium">
+              <i class="fa-regular fa-calendar absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-xs"></i>
+            </div>
+          </div>
+
+          <!-- 2. Nature of the Issue -->
+          <div>
+            <label class="form-label-modern">
+              Nature of Issue <span class="required-star">*</span>
+            </label>
+            <input type="hidden" id="nature" name="nature" value="MES">
+            <div id="natureContainer" class="flex items-center gap-1.5 flex-wrap p-1 bg-slate-100 rounded-xl border border-slate-200 min-h-[42px]">
+              <!-- Dynamically populated from masterNatures in app.js -->
+            </div>
+          </div>
+
+          <!-- 3. Area of Issue (Searchable Multi-Select with Select All / Unselect All) -->
+          <div class="relative" id="formAreaDropdownWrapper">
+            <label class="form-label-modern" for="btnToggleFormAreaDropdown">
+              Area / Plant <span class="required-star">*</span>
+            </label>
+            <input type="hidden" id="area" name="area" value="">
+            
+            <button type="button" id="btnToggleFormAreaDropdown" onclick="toggleFormDropdown('area', event)" class="form-input-modern py-2.5 px-3.5 text-xs w-full font-semibold flex items-center justify-between gap-2 bg-white hover:bg-slate-50 border border-slate-200 shadow-xs cursor-pointer select-none rounded-xl">
+              <span class="flex items-center gap-2 truncate">
+                <i class="fa-solid fa-building-flag text-[#E60012] text-xs"></i>
+                <span id="labelFormArea" class="text-slate-500">-- Select Area / Plant --</span>
+              </span>
+              <div class="flex items-center gap-1.5 flex-shrink-0">
+                <span id="badgeFormAreaCount" class="hidden text-[10px] font-mono font-bold text-slate-500 px-1.5 py-0.5 rounded bg-slate-100">0</span>
+                <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>
+              </div>
+            </button>
+
+            <!-- Popover Panel for Area Selection -->
+            <div id="panelFormAreaDropdown" class="hidden absolute left-0 top-full mt-1.5 w-full sm:min-w-[280px] bg-white rounded-xl shadow-2xl border border-slate-200 z-50 p-3 space-y-2">
+              <!-- Search inside Area Dropdown -->
+              <div class="relative">
+                <input type="text" id="searchFormArea" oninput="filterFormAreaList()" placeholder="Search area/plant..." class="form-input-modern pl-8 py-1.5 text-xs w-full">
+                <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+              </div>
+              <!-- Action Buttons: Select All / Unselect All -->
+              <div class="flex items-center justify-between pt-1 border-b border-slate-100 pb-1.5 text-xs">
+                <div class="flex items-center gap-2">
+                  <button type="button" onclick="selectAllFormAreas(true)" class="text-[11px] font-bold text-blue-600 hover:text-blue-800 transition-colors cursor-pointer">
+                    Select All
+                  </button>
+                  <span class="text-slate-300">|</span>
+                  <button type="button" onclick="selectAllFormAreas(false)" class="text-[11px] font-bold text-slate-500 hover:text-red-600 transition-colors cursor-pointer">
+                    Unselect All
+                  </button>
+                </div>
+                <span id="badgeFormAreaPanelCount" class="text-[10px] font-mono font-bold text-slate-500 px-1.5 py-0.5 rounded bg-slate-100">0 Selected</span>
+              </div>
+              <!-- Scrollable Checkbox List -->
+              <div id="listFormAreaCheckboxes" class="max-h-52 overflow-y-auto space-y-0.5 pr-1 divide-y divide-slate-50 text-xs">
+                <!-- Dynamically populated in app.js -->
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. Machine Code with Critical (Yes/No) Option (Searchable Multi-Select with Select All / Unselect All) -->
+          <div class="relative" id="formMachineDropdownWrapper">
+            <div class="flex items-center justify-between mb-1">
+              <label class="form-label-modern mb-0" for="btnToggleFormMachineDropdown">
+                Machine Code <span class="required-star">*</span>
+              </label>
+              <!-- Critical (Yes/No) Option Switcher -->
+              <div class="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg border border-slate-200" title="Is this a critical production bottleneck machine?">
+                <button type="button" id="btn-crit-no" onclick="setCriticalMachine('No')" class="px-2 py-0.5 text-[10px] font-bold rounded-md bg-white text-slate-800 shadow-sm transition-all">
+                  No
+                </button>
+                <button type="button" id="btn-crit-yes" onclick="setCriticalMachine('Yes')" class="px-2 py-0.5 text-[10px] font-bold rounded-md text-slate-500 hover:text-red-600 transition-all">
+                  Yes
+                </button>
+              </div>
+            </div>
+            <input type="hidden" id="isCritical" name="isCritical" value="No">
+            <input type="hidden" id="machineNo" name="machineNo" value="">
+
+            <button type="button" id="btnToggleFormMachineDropdown" onclick="toggleFormDropdown('machine', event)" class="form-input-modern py-2.5 px-3.5 text-xs w-full font-mono font-bold flex items-center justify-between gap-2 bg-white hover:bg-slate-50 border border-slate-200 shadow-xs cursor-pointer select-none rounded-xl">
+              <span class="flex items-center gap-2 truncate">
+                <i class="fa-solid fa-industry text-[#E60012] text-xs"></i>
+                <span id="labelFormMachine" class="text-slate-500 font-sans font-semibold">-- Select Machine Code --</span>
+              </span>
+              <div class="flex items-center gap-1.5 flex-shrink-0">
+                <span id="badgeFormMachineCount" class="hidden text-[10px] font-mono font-bold text-slate-500 px-1.5 py-0.5 rounded bg-slate-100">0</span>
+                <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>
+              </div>
+            </button>
+
+            <!-- Popover Panel for Machine Selection -->
+            <div id="panelFormMachineDropdown" class="hidden absolute left-0 top-full mt-1.5 w-full sm:min-w-[340px] bg-white rounded-xl shadow-2xl border border-slate-200 z-50 p-3 space-y-2">
+              <!-- Search inside Machine Dropdown -->
+              <div class="relative">
+                <input type="text" id="searchFormMachine" oninput="filterFormMachineList()" placeholder="Search machine code, name, process..." class="form-input-modern pl-8 py-1.5 text-xs w-full">
+                <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+              </div>
+              <!-- Action Buttons: Select All / Unselect All -->
+              <div class="flex items-center justify-between pt-1 border-b border-slate-100 pb-1.5 text-xs">
+                <div class="flex items-center gap-2">
+                  <button type="button" onclick="selectAllFormMachines(true)" class="text-[11px] font-bold text-blue-600 hover:text-blue-800 transition-colors cursor-pointer">
+                    Select All
+                  </button>
+                  <span class="text-slate-300">|</span>
+                  <button type="button" onclick="selectAllFormMachines(false)" class="text-[11px] font-bold text-slate-500 hover:text-red-600 transition-colors cursor-pointer">
+                    Unselect All
+                  </button>
+                </div>
+                <span id="badgeFormMachinePanelCount" class="text-[10px] font-mono font-bold text-slate-500 px-1.5 py-0.5 rounded bg-slate-100">0 Selected</span>
+              </div>
+              <!-- Scrollable Checkbox List -->
+              <div id="listFormMachineCheckboxes" class="max-h-56 overflow-y-auto space-y-0.5 pr-1 divide-y divide-slate-50 text-xs">
+                <!-- Dynamically populated in app.js -->
+              </div>
+            </div>
+
+            <!-- Machine Micro-telemetry & Badges -->
+            <div class="flex items-center justify-between mt-1 px-0.5">
+              <span id="processBadge" class="hidden text-[10px] px-1.5 py-0.5 rounded bg-slate-900 text-white font-bold font-mono"></span>
+              <span id="criticalBadge" class="hidden text-[10px] px-2 py-0.5 rounded font-bold font-mono"></span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ROW 2: Downtime Metrics (Min, Affected, Total), Category, Issue Details, Action Plan Taken -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+          
+          <!-- 6a. Downtime Min (Per Machine) -->
+          <div class="lg:col-span-1">
+            <label class="form-label-modern" for="downtimeMinutes" title="Breakdown duration per machine in minutes">
+              Downtime Min <span class="required-star">*</span>
+            </label>
+            <div class="relative">
+              <input type="number" id="downtimeMinutes" name="downtimeMinutes" min="1" max="100000" placeholder="Min" required oninput="calculateTotalDowntime()" class="form-input-modern font-mono font-bold text-red-600 text-base pr-10">
+              <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-400">mins</span>
+            </div>
+          </div>
+
+          <!-- 6b. No of Machines Affected -->
+          <div class="lg:col-span-1">
+            <label class="form-label-modern" for="affectedMachines" title="Number of machines affected by this downtime event">
+              No of Machines <span class="required-star">*</span>
+            </label>
+            <div class="relative">
+              <input type="number" id="affectedMachines" name="affectedMachines" min="1" max="1000" value="1" required oninput="calculateTotalDowntime()" class="form-input-modern font-mono font-bold text-slate-800 text-base pr-10">
+              <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-400">qty</span>
+            </div>
+          </div>
+
+          <!-- 6c. Total Downtime Mins (Auto-Calculated) -->
+          <div class="lg:col-span-1">
+            <label class="form-label-modern" for="totalDowntimeMinutes" title="Total Downtime Min = Downtime Min * No of Machines Affected">
+              Total DT Mins
+            </label>
+            <div class="relative">
+              <input type="number" id="totalDowntimeMinutes" name="totalDowntimeMinutes" readonly placeholder="0" class="form-input-modern font-mono font-black text-red-700 bg-red-50/70 border-red-200 text-base pr-10 cursor-not-allowed">
+              <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] font-bold text-red-500">mins</span>
+            </div>
+          </div>
+
+          <!-- 7. Category -->
+          <div class="lg:col-span-1">
+            <label class="form-label-modern" for="category">
+              Category <span class="required-star">*</span>
+            </label>
+            <select id="category" name="category" required class="form-input-modern font-semibold">
+              <option value="Printer">Printer</option>
+              <option value="Scanner">Scanner</option>
+              <option value="IPC">IPC</option>
+              <option value="Infra">Infra</option>
+              <option value="NSNL">NSNL</option>
+              <option value="MES" selected>MES</option>
+              <option value="Network / Switch">Network / Switch</option>
+              <option value="PLC / SCADA">PLC / SCADA</option>
+              <option value="Hardware / PC">Hardware / PC</option>
+              <option value="Power / UPS">Power / UPS</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <!-- 8. Issue Details (Manual Type) -->
+          <div class="lg:col-span-1">
+            <label class="form-label-modern" for="issueDetails">
+              Issue Details <span class="required-star">*</span>
+            </label>
+            <input type="text" id="issueDetails" name="issueDetails" required placeholder="Enter issue details..." class="form-input-modern font-semibold text-slate-800">
+          </div>
+
+          <!-- 9. Action Plan Taken (Manual Type) -->
+          <div class="lg:col-span-1">
+            <label class="form-label-modern" for="actionPlan">
+              Action Plan Taken
+            </label>
+            <input type="text" id="actionPlan" name="actionPlan" placeholder="Enter action plan taken..." class="form-input-modern font-semibold text-slate-800">
+          </div>
+
+        </div>
+
+        <!-- ROW 3: Responsibility, Issue Closed Date, Solved By, Issue Closure Status -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          
+          <!-- 10. Responsibility -->
+          <div>
+            <label class="form-label-modern" for="responsibility">
+              Responsibility <span class="required-star">*</span>
+            </label>
+            <select id="responsibility" name="responsibility" required class="form-input-modern font-bold text-slate-800">
+              <option value="ATC" selected>ATC</option>
+              <option value="MELSS">MELSS</option>
+            </select>
+          </div>
+
+          <!-- 11. Issue Closed Date -->
+          <div id="closed-date-container" style="opacity: 0.6;">
+            <label class="form-label-modern" for="closedDate">
+              Issue Closed Date
+            </label>
+            <div class="relative">
+              <input type="date" id="closedDate" name="closedDate" class="form-input-modern pr-8 font-medium">
+              <i class="fa-regular fa-calendar-check absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-xs"></i>
+            </div>
+          </div>
+
+          <!-- 12. Responsible Person -->
+          <div>
+            <div class="flex items-center justify-between">
+              <label class="form-label-modern" for="solvedBy">
+                Responsible Person <span class="required-star">*</span>
+              </label>
+              <div class="flex items-center gap-2">
+                <button type="button" id="btn-add-technician" class="text-[11px] font-bold text-red-600 hover:text-red-700 flex items-center gap-1" title="Add New Responsible Person">
+                  <i class="fa-solid fa-plus text-[9px]"></i> Add
+                </button>
+                <button type="button" id="btn-edit-technician" onclick="promptEditSelectedTechnician()" class="text-[11px] font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1" title="Edit / Rename selected Responsible Person">
+                  <i class="fa-solid fa-pencil text-[9px]"></i> Edit
+                </button>
+              </div>
+            </div>
+            <select id="solvedBy" name="solvedBy" required class="form-input-modern font-bold text-slate-800">
+              <option value="">-- Select Responsible Person --</option>
+              <!-- Populated in app.js: Srinivas, Narayana, Bharadwaj, Jagadeesh, Pardhu, etc. -->
+            </select>
+          </div>
+
+          <!-- 13. Issue Closure Status -->
+          <div>
+            <label class="form-label-modern">
+              Closure Status <span class="required-star">*</span>
+            </label>
+            <input type="hidden" id="closureStatus" name="closureStatus" value="Open">
+            <div class="segmented-control">
+              <div id="btn-status-completed" class="segmented-option">
+                <i class="fa-solid fa-circle-check text-xs"></i> Completed
+              </div>
+              <div id="btn-status-open" class="segmented-option active-open">
+                <i class="fa-solid fa-circle-exclamation text-xs"></i> Open
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ROW 4: Enter Remarks Any -->
+        <div>
+          <label class="form-label-modern" for="remarks">
+            Enter Remarks Any
+          </label>
+          <textarea id="remarks" name="remarks" rows="2" placeholder="Enter root cause analysis, spare part part-number, or shift handover notes..." class="form-input-modern"></textarea>
+        </div>
+
+        <!-- Bottom Form Buttons (Yokohama Red & Yellow Action Buttons) -->
+        <div class="flex flex-wrap items-center justify-between pt-4 border-t border-slate-200 gap-3">
+          
+
+
+          <div class="flex items-center gap-3">
+            <button type="button" onclick="resetForm()" class="btn-yoko-outline text-slate-600 hover:text-slate-900 font-bold bg-yellow-400/10 hover:bg-yellow-400/20 border-yellow-300 text-yellow-800">
+              <i class="fa-solid fa-eraser"></i> Clear Data
+            </button>
+            
+            <button type="submit" id="btn-save-record" class="btn-yoko-red">
+              <i class="fa-solid fa-floppy-disk mr-1.5"></i> Save Data
+            </button>
+          </div>
+        </div>
+
+      </form>
+    </section>
+    </div><!-- End of #viewEntryContainer -->
+
+    <!-- Kept hidden to satisfy any selector references -->
+    <div id="adminLockedBanner" class="hidden"></div>
+
+    <!-- =========================================================================
+         PROTECTED ADMIN SECTIONS (Metrics Dashboard & Incident Logs)
+         ========================================================================= -->
+    <div id="adminProtectedSections" class="hidden space-y-8">
+    
+    <!-- =========================================================================
+         SECTION 2: PLANT ANALYTICS & REAL-TIME KPI DASHBOARD
+         ========================================================================= -->
+    <section id="analytics-section" class="space-y-6">
+      
+      <!-- Section Header & Filter Toolbar matching sketch: SD, ED, Month, Year -->
+      <div class="card-modern p-5 bg-white border border-slate-200 shadow-sm">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          
+          <div class="flex items-center gap-3">
+            <span class="inline-block w-2.5 h-8 bg-[#E60012] rounded-sm"></span>
+            <div>
+              <h3 class="text-base font-black text-slate-900 tracking-tight uppercase flex items-center gap-2">
+                <span>DASHBOARD</span>
+              </h3>
+              
+            </div>
+          </div>
+
+          <!-- Filter Toolbar matching notebook sketch: From, To, Month, Year -->
+          <div class="flex flex-wrap items-center gap-2.5">
+            <!-- From: Start Date -->
+            <div class="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs">
+              <span class="font-bold text-slate-500 uppercase tracking-wider text-[10px]">From:</span>
+              <input type="date" id="dashboardStartDate" onchange="onDashboardDateFilterChange()" class="text-xs font-semibold text-slate-800 bg-transparent border-none focus:outline-none cursor-pointer">
+            </div>
+
+            <!-- To: End Date -->
+            <div class="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs">
+              <span class="font-bold text-slate-500 uppercase tracking-wider text-[10px]">To:</span>
+              <input type="date" id="dashboardEndDate" onchange="onDashboardDateFilterChange()" class="text-xs font-semibold text-slate-800 bg-transparent border-none focus:outline-none cursor-pointer">
+            </div>
+
+            <!-- Month Dropdown -->
+            <div class="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs">
+              <span class="font-bold text-slate-500 uppercase tracking-wider text-[10px]">Month:</span>
+              <select id="dashboardMonthFilter" onchange="onDashboardMonthChange(this.value)" class="text-xs font-bold text-slate-800 bg-transparent border-none focus:outline-none cursor-pointer">
+                <option value="ALL">All Months</option>
+                <option value="2026-06">June 2026</option>
+                <option value="2026-05">May 2026</option>
+                <option value="2026-04">April 2026</option>
+                <option value="2026-03">March 2026</option>
+                <option value="2026-02">February 2026</option>
+                <option value="2026-01">January 2026</option>
+              </select>
+            </div>
+
+            <!-- Year Dropdown -->
+            <div class="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs">
+              <span class="font-bold text-slate-500 uppercase tracking-wider text-[10px]">Year:</span>
+              <select id="dashboardYearFilter" onchange="onDashboardYearChange(this.value)" class="text-xs font-bold text-slate-800 bg-transparent border-none focus:outline-none cursor-pointer">
+                <option value="2026">2026</option>
+                <option value="ALL">All Years</option>
+              </select>
+            </div>
+
+            <!-- Reset Filter Button -->
+            <button type="button" onclick="resetDashboardFilters()" class="px-2.5 py-1.5 text-xs font-bold rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-600 transition-colors flex items-center gap-1" title="Reset date filters">
+              <i class="fa-solid fa-rotate-left text-[10px]"></i>
+              <span>Reset</span>
+            </button>
+
+            <!-- Export Current Dashboard Month/Date Excel Button -->
+            <button type="button" onclick="exportDashboardPeriodExcel()" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-all flex items-center gap-1.5 shadow-sm border border-emerald-700 active:scale-95" title="Export Executive Excel Report for currently selected Month/Date">
+              <i class="fa-solid fa-file-excel text-emerald-100 text-xs"></i>
+              <span id="btnExportDashboardPeriodText">Export Month Excel</span>
+            </button>
+
+            <!-- Incident Counter Badge -->
+            <span class="text-xs font-bold text-slate-700 bg-red-50 text-[#E60012] border border-red-200 px-2.5 py-1.5 rounded-lg font-mono" id="kpi-total-incidents">...</span>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- 4 Top KPI Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <!-- KPI 1: Total Downtime -->
+        <div class="card-modern p-5 relative overflow-hidden">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold uppercase text-slate-500 tracking-wider">Total Plant Downtime</span>
+            <div class="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center">
+              <i class="fa-regular fa-clock text-sm"></i>
+            </div>
+          </div>
+          <div class="text-2xl font-black text-slate-900 font-mono tracking-tight" id="kpi-total-hours">...</div>
+          <div class="text-xs text-slate-500 font-medium mt-1 flex items-center gap-1.5">
+            <span class="text-red-600 font-bold font-mono" id="kpi-total-mins">...</span>
+          </div>
+          <div class="absolute bottom-0 left-0 right-0 h-1 bg-red-600"></div>
+        </div>
+
+        <!-- KPI 2: Active Open Incidents -->
+        <div class="card-modern p-5 relative overflow-hidden">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold uppercase text-slate-500 tracking-wider">Open Incidents</span>
+            <div class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+              <i class="fa-solid fa-triangle-exclamation text-sm"></i>
+            </div>
+          </div>
+          <div class="text-2xl font-black text-amber-600 font-mono tracking-tight" id="kpi-open-alerts">0</div>
+          
+          <div class="absolute bottom-0 left-0 right-0 h-1 bg-amber-500"></div>
+        </div>
+
+        <!-- KPI 3: MTTR -->
+        <div class="card-modern p-5 relative overflow-hidden">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold uppercase text-slate-500 tracking-wider">MTTR</span>
+            <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+              <i class="fa-solid fa-wrench text-sm"></i>
+            </div>
+          </div>
+          <div class="text-2xl font-black text-slate-900 font-mono tracking-tight" id="kpi-mttr">0 min</div>
+          
+          <div class="absolute bottom-0 left-0 right-0 h-1 bg-blue-600"></div>
+        </div>
+
+        <!-- KPI 4: Resolution Rate -->
+        <div class="card-modern p-5 relative overflow-hidden">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold uppercase text-slate-500 tracking-wider">Closure Rate</span>
+            <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <i class="fa-solid fa-circle-check text-sm"></i>
+            </div>
+          </div>
+          <div class="text-2xl font-black text-emerald-600 font-mono tracking-tight" id="kpi-resolution-rate">100%</div>
+          
+          <div class="absolute bottom-0 left-0 right-0 h-1 bg-emerald-500"></div>
+        </div>
+
+      </div>
+
+      <!-- =========================================================================
+           SECTION 1: UPTIME DB (Availability Speedometer, Monthly FY, Area, Process, Day)
+           ========================================================================= -->
+      <div class="space-y-6 pt-2">
+        
+        <!-- Section 1 Header Banner -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b-2 border-emerald-500">
+          <div class="flex items-center gap-2.5">
+            <span class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
+            <h3 class="text-sm font-black uppercase tracking-wider text-slate-800 flex items-center gap-2">
+              <i class="fa-solid fa-gauge-high text-emerald-600"></i> Uptime DB (Availability &amp; Equipment Operations)
+            </h3>
+          </div>
+          <div class="flex items-center gap-3 text-xs font-semibold text-slate-600">
+            
+            <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-500"></span> Warning (95.0-98.9%)</span>
+            <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-rose-500"></span> Critical (&lt;95.0%)</span>
+          </div>
+        </div>
+
+        <!-- Uptime DB Row 1: Speedometer Gauge + Monthly Availability (FY) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          
+          <!-- Chart 1A: Modern Speedometer Gauge ("Availability") (5 cols on lg) -->
+          <div class="lg:col-span-5 card-modern p-5 bg-white flex flex-col justify-between shadow-sm">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+              <div class="flex items-center gap-2">
+                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                  <i class="fa-solid fa-gauge text-emerald-600"></i> Overall Availability
+                </h4>
+                <span id="gaugeStatusBadge" class="hidden"></span>
+              </div>
+
+              <!-- Car Speedometer Color Options -->
+              <div class="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200" title="Speedometer Car Color Options">
+                <span class="text-[9px] font-bold uppercase text-slate-400 font-mono hidden sm:inline">Color:</span>
+                <button type="button" onclick="setSpeedometerColor('multi')" id="speedo-btn-multi" class="w-4 h-4 rounded-full bg-gradient-to-r from-red-500 via-amber-400 to-emerald-500 border border-slate-300 ring-2 ring-emerald-500 hover:scale-125 transition-all" title="Car Tachometer (Multi-Color)"></button>
+                <button type="button" onclick="setSpeedometerColor('red')" id="speedo-btn-red" class="w-4 h-4 rounded-full bg-[#E60012] border border-slate-300 hover:scale-125 transition-all" title="Sport Red"></button>
+                <button type="button" onclick="setSpeedometerColor('cyan')" id="speedo-btn-cyan" class="w-4 h-4 rounded-full bg-cyan-400 border border-slate-300 hover:scale-125 transition-all" title="Electric Cyan"></button>
+                <button type="button" onclick="setSpeedometerColor('emerald')" id="speedo-btn-emerald" class="w-4 h-4 rounded-full bg-emerald-500 border border-slate-300 hover:scale-125 transition-all" title="Eco Green"></button>
+                <button type="button" onclick="setSpeedometerColor('amber')" id="speedo-btn-amber" class="w-4 h-4 rounded-full bg-amber-500 border border-slate-300 hover:scale-125 transition-all" title="Racing Amber"></button>
+              </div>
+            </div>
+
+            <!-- Gauge Container -->
+            <div class="relative flex flex-col items-center justify-center my-auto py-2">
+              <div class="w-full max-w-[280px] h-44 relative flex items-center justify-center">
+                <canvas id="gaugeAvailability"></canvas>
+                <!-- Gauge Center Value Readout -->
+                <div class="absolute inset-0 flex flex-col items-center justify-end pb-3 pointer-events-none">
+                  <span id="gaugePercentText" class="text-3xl sm:text-4xl font-black font-mono tracking-tight text-slate-900">...</span>
+                  <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-0.5">Availability</span>
+                </div>
+              </div>
+              
+              <!-- Speedometer scale / target label -->
+              <div class="w-full max-w-[280px] flex items-center justify-between text-[10px] font-mono text-slate-400 font-bold px-4 border-t border-slate-100 pt-2 mt-1">
+                <span>0%</span>
+                <span class="text-emerald-600 font-bold flex items-center gap-1"><i class="fa-solid fa-bullseye"></i> Target: ≥99.0%</span>
+                <span>100%</span>
+              </div>
+            </div>
+
+            <!-- Operating stats summary under gauge -->
+            <div class="grid grid-cols-2 gap-2 pt-3 border-t border-slate-100 text-center text-xs">
+              <div class="bg-slate-50 p-2 rounded-lg">
+                <span class="text-[10px] uppercase font-bold text-slate-400 block">Total Uptime</span>
+                <span id="gaugeUptimeHours" class="font-bold font-mono text-emerald-600 text-sm">...</span>
+              </div>
+              <div class="bg-slate-50 p-2 rounded-lg">
+                <span class="text-[10px] uppercase font-bold text-slate-400 block">Total Downtime</span>
+                <span id="gaugeDowntimeHours" class="font-bold font-mono text-red-600 text-sm">...</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Chart 1B: Monthly Availability FY (7 cols on lg) -->
+          <div class="lg:col-span-7 card-modern p-5 bg-white shadow-sm">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+              <div>
+                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                  <i class="fa-solid fa-calendar-check text-emerald-600"></i> <span id="monthlyAvailabilityTitle">Monthly Availability (FY 2026)</span>
+                </h4>
+                
+              </div>
+              <!-- Automatch Total Badges: Year, Month, Day -->
+              <div class="flex flex-wrap items-center gap-1.5">
+                <span id="kpiYearAvailBadge" class="inline-flex items-center gap-1 text-[10px] font-bold font-mono px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200" title="Fiscal Year Availability">
+                  <i class="fa-solid fa-calendar text-emerald-600"></i> FY <span id="kpiYearLabel">2026</span>: <span id="kpiYearAvailVal" class="font-black">...</span>
+                </span>
+                <span id="kpiMonthAvailBadge" class="inline-flex items-center gap-1 text-[10px] font-bold font-mono px-2 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200" title="Selected Month Availability">
+                  <i class="fa-solid fa-calendar-days text-blue-600"></i> Month: <span id="kpiMonthAvailVal" class="font-black">...</span>
+                </span>
+                <span id="kpiDayAvailBadge" class="inline-flex items-center gap-1 text-[10px] font-bold font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200" title="Current Day / Active Period Trajectory">
+                  <i class="fa-solid fa-clock text-slate-500"></i> Day: <span id="kpiDayAvailVal" class="font-black">...</span>
+                </span>
+              </div>
+            </div>
+            <div class="h-64 relative">
+              <canvas id="chartMonthlyAvailability"></canvas>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Uptime DB Row 2: Area Wise Availability + Process Wise Availability -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          <!-- Chart 1C: Area Wise Availability (Clean White & Green Simple) -->
+          <div class="card-modern p-5 bg-white shadow-sm border border-slate-200 rounded-xl relative overflow-hidden">
+            <!-- Top Green Accent Line -->
+            <div class="absolute top-0 left-0 right-0 h-1 bg-emerald-500"></div>
+            
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                  <i class="fa-solid fa-chart-simple text-emerald-600"></i> Area Wise Availability
+                </h4>
+              </div>
+              <div class="flex items-center gap-2">
+                <span id="chartAreaAvailBadge" class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono tracking-wider">ALL MONTHS</span>
+                <span class="text-[10px] font-mono text-slate-500 font-bold bg-slate-100 px-2 py-0.5 rounded border border-slate-200">TARGET ≥99%</span>
+              </div>
+            </div>
+
+            <!-- Chart Canvas -->
+            <div class="h-64 relative">
+              <canvas id="chartAreaAvailability"></canvas>
+            </div>
+
+            <!-- Clean White & Green Simple Footer Legend -->
+            <div class="flex items-center justify-between pt-2 border-t border-slate-100 mt-2 text-[10px] font-semibold text-slate-500">
+              
+              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-500"></span> Warning (95.0-98.9%)</span>
+              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-rose-500"></span> Critical (&lt;95.0%)</span>
+            </div>
+          </div>
+
+          <!-- Chart 1D: Process Wise Availability -->
+          <div class="card-modern p-5 bg-white shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+              <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                <i class="fa-solid fa-gears text-emerald-600"></i> Process Wise Availability
+              </h4>
+              <span class="text-[10px] text-slate-400 font-semibold uppercase font-mono">Uptime %</span>
+            </div>
+            <div class="h-64 relative">
+              <canvas id="chartProcessAvailability"></canvas>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Uptime DB Row 3: Availability & Downtime Trend (Dual-Axis Business Line Chart) -->
+        <div class="card-modern p-5 bg-white shadow-sm border border-slate-200 rounded-xl relative overflow-hidden">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+            <div>
+              <h4 class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                <i class="fa-solid fa-chart-line text-emerald-600"></i> Equipment Availability &amp; Downtime Trajectory
+              </h4>
+              
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Availability %
+              </span>
+              <span class="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded bg-red-50 text-[#E60012] border border-red-200">
+                <span class="w-1.5 h-1.5 rounded-full bg-[#E60012]"></span> Downtime (Mins)
+              </span>
+              <span id="chartDayAvailBadge" class="text-[10px] font-bold font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">Trajectory</span>
+            </div>
+          </div>
+          <div class="h-64 relative">
+            <canvas id="chartDayAvailability"></canvas>
+          </div>
+        </div>
+
+        <!-- =========================================================================
+           SECTION 2: DOWNTIME (Area Wise DT, Process Wise DT & Category Wise Modern Pie/Donut Chart)
+           ========================================================================= -->
+      <div class="space-y-6 pt-4">
+        
+        <!-- Section 2 Header Banner -->
+        <div class="flex items-center justify-between pb-2 border-b-2 border-[#E60012]">
+          <div class="flex items-center gap-2.5">
+            <span class="w-3 h-3 rounded-full bg-[#E60012] animate-pulse"></span>
+            <h3 class="text-sm font-black uppercase tracking-wider text-slate-800 flex items-center gap-2">
+              <i class="fa-solid fa-clock-rotate-left text-[#E60012]"></i> DownTime Analytics
+            </h3>
+          </div>
+          
+        </div>
+
+        <!-- Downtime Row 1: Area Wise DT (New!) + Process Wise DT (Matching Red Theme) -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          <!-- Chart 2A: Area Wise Downtime (Same Theme Red Like Downtime Matching) -->
+          <div class="card-modern p-5 bg-white shadow-sm border border-slate-200 rounded-xl relative overflow-hidden">
+            <div class="absolute top-0 left-0 right-0 h-1 bg-[#E60012]"></div>
+            <div class="flex items-center justify-between mb-3">
+              <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                <i class="fa-solid fa-industry text-[#E60012]"></i> Area Wise Downtime
+              </h4>
+              <span id="chartAreaDowntimeBadge" class="text-[10px] text-slate-400 font-semibold uppercase font-mono">Minutes</span>
+            </div>
+            <div class="h-64 relative">
+              <canvas id="chartAreaDowntime"></canvas>
+            </div>
+          </div>
+
+          <!-- Chart 2B: Process Wise Downtime -->
+          <div class="card-modern p-5 bg-white shadow-sm border border-slate-200 rounded-xl relative overflow-hidden">
+            <div class="absolute top-0 left-0 right-0 h-1 bg-[#E60012]"></div>
+            <div class="flex items-center justify-between mb-3">
+              <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                <i class="fa-solid fa-bars-progress text-[#E60012]"></i> Process Wise Downtime
+              </h4>
+              <span id="chartProcessDowntimeBadge" class="text-[10px] text-slate-400 font-semibold uppercase font-mono">Minutes</span>
+            </div>
+            <div class="h-64 relative">
+              <canvas id="chartProcessDowntime"></canvas>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Downtime Row 2: Category Wise Downtime Chart with View Switcher -->
+        <div class="card-modern p-5 bg-white shadow-sm border border-slate-200 rounded-xl">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+            <div class="flex items-center gap-2">
+              <h4 class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                <i id="catChartIcon" class="fa-solid fa-chart-pie text-[#E60012]"></i> Category Downtime Loss Breakdown
+              </h4>
+            </div>
+            
+            <div class="flex items-center gap-2">
+              <!-- Mode Switcher: Pie Chart, Bar, Graph -->
+              <div class="inline-flex rounded-lg bg-slate-100 p-0.5 border border-slate-200 text-xs" role="group">
+                <button type="button" id="btnCatChartPie" onclick="setCategoryChartType('pie')" class="px-2.5 py-1 text-xs font-bold rounded-md bg-white text-slate-900 shadow-xs flex items-center gap-1.5 transition-all" title="View as Pie / Donut Chart">
+                  <i class="fa-solid fa-chart-pie text-[#E60012]"></i> Pie Chart
+                </button>
+                <button type="button" id="btnCatChartBar" onclick="setCategoryChartType('bar')" class="px-2.5 py-1 text-xs font-bold rounded-md text-slate-600 hover:text-slate-900 flex items-center gap-1.5 transition-all" title="View as Bar Chart">
+                  <i class="fa-solid fa-chart-column text-blue-600"></i> Bar
+                </button>
+                <button type="button" id="btnCatChartLine" onclick="setCategoryChartType('line')" class="px-2.5 py-1 text-xs font-bold rounded-md text-slate-600 hover:text-slate-900 flex items-center gap-1.5 transition-all" title="View as Line Graph">
+                  <i class="fa-solid fa-chart-line text-emerald-600"></i> Graph
+                </button>
+              </div>
+              <span class="text-[10px] font-bold px-2 py-1 rounded bg-red-50 text-[#E60012] border border-red-200 font-mono tracking-wider hidden md:inline-block">CATEGORY SHARE</span>
+            </div>
+          </div>
+          <div id="catChartContainer" class="h-64 relative w-full">
+            <canvas id="chartCategoryPie"></canvas>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- =========================================================================
+         SECTION 3: INCIDENT RECORDS LOG & INTERACTIVE TABLE
+         ========================================================================= -->
+    <section id="table-section" class="card-modern p-6 bg-white shadow-xl">
+      
+      <!-- Table Header with Proper Positioned Export Buttons -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200 gap-4">
+        
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="inline-block w-2.5 h-6 bg-[#E60012] rounded-sm"></span>
+            <h3 class="text-xl font-black text-slate-900 tracking-tight uppercase">
+              PLANT IT DOWNTIME INCIDENT LOGS
+            </h3>
+            <span id="recordCountBadge" class="ml-2 px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-900 text-white font-mono">
+              0 Incidents
+            </span>
+          </div>
+          <span id="showingInfo" class="hidden"></span>
+        </div>
+
+        <!-- Downside Export Buttons & Logs Maintenance (Admin Only) -->
+        <div id="tableExportButtons" class="hidden flex items-center gap-2 sm:ml-auto">
+          <button type="button" id="btnImportDowntimeExcel" onclick="openImportDowntimeModal()" class="px-3.5 py-2 rounded-lg text-xs font-bold bg-violet-600 hover:bg-violet-700 text-white flex items-center gap-1.5 shadow-sm transition-all border border-violet-700 active:scale-95 cursor-pointer" title="Import Downtime Entry Excel file">
+            <i class="fa-solid fa-file-import text-violet-100 text-sm"></i>
+            <span>Import Downtime Excel</span>
+          </button>
+          <button type="button" onclick="clearAllIncidentLogs()" class="px-3.5 py-2 rounded-lg text-xs font-bold bg-white hover:bg-rose-50 text-slate-600 hover:text-rose-600 flex items-center gap-1.5 shadow-2xs transition-all border border-slate-200 hover:border-rose-300 active:scale-95 cursor-pointer" title="Empty all downtime incident logs">
+            <i class="fa-solid fa-trash-can text-rose-500 text-xs"></i>
+            <span>Empty Logs</span>
+          </button>
+          <button type="button" onclick="openDateExportModal()" class="px-3.5 py-2 rounded-lg text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white flex items-center gap-1.5 shadow-sm transition-all border border-slate-800 active:scale-95" title="Choose specific Date or Month to export">
+            <i class="fa-regular fa-calendar-days text-amber-400 text-sm"></i>
+            <span>Choose Date / Month</span>
+          </button>
+          <button type="button" onclick="exportToExcel()" class="px-3.5 py-2 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 shadow-sm transition-all border border-emerald-700 active:scale-95" title="Export Excel (.xlsx) with 2 sheets (Incident Logs & Uptime Matrix)">
+            <i class="fa-solid fa-file-excel text-emerald-100 text-sm"></i>
+            <span>Export Excel (.xlsx)</span>
+          </button>
+          <button type="button" onclick="exportToCSV()" class="px-3.5 py-2 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1.5 shadow-sm transition-all border border-blue-700 active:scale-95" title="Export CSV for selected or active period">
+            <i class="fa-solid fa-file-csv text-blue-100 text-sm"></i>
+            <span>Export CSV</span>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Search & Filter Controls Toolbar -->
+      <div class="flex flex-wrap items-center gap-2.5 py-3 border-b border-slate-100">
+        
+        <!-- Search Box -->
+        <div class="relative min-w-[200px] flex-1 sm:flex-none">
+          <input type="text" id="tableSearch" placeholder="Search machine, issue, tech..." class="form-input-modern pl-9 py-2 text-xs">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+        </div>
+
+        <!-- Date-Wise Filter -->
+        <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 shadow-xs">
+          <i class="fa-regular fa-calendar-days text-[#E60012] text-xs"></i>
+          <span class="text-[11px] font-bold text-slate-600 uppercase">Date:</span>
+          <input type="date" id="filterDate" class="bg-white border border-slate-200 rounded px-1.5 py-0.5 text-xs font-semibold text-slate-800 outline-none cursor-pointer" title="Filter by date (From)">
+          <span class="text-[10px] font-bold text-slate-400">to</span>
+          <input type="date" id="filterDateTo" class="bg-white border border-slate-200 rounded px-1.5 py-0.5 text-xs font-semibold text-slate-800 outline-none cursor-pointer" title="Filter by date (To, optional)">
+          <button type="button" id="btnClearDateFilter" class="text-slate-400 hover:text-red-600 text-xs ml-0.5" title="Clear Date Filter">
+            <i class="fa-solid fa-circle-xmark"></i>
+          </button>
+        </div>
+
+        <!-- Category Filter -->
+        <select id="filterCategory" class="form-input-modern py-2 text-xs w-auto font-semibold">
+          <option value="ALL">All Categories</option>
+          <!-- Dynamically populated from downtimeRecords in app.js -->
+        </select>
+
+        <!-- Nature Filter -->
+        <select id="filterNature" class="form-input-modern py-2 text-xs w-auto font-semibold">
+          <option value="ALL">All Nature</option>
+          <option value="MES">MES Only</option>
+          <option value="INFRA">INFRA Only</option>
+        </select>
+
+        <!-- Status Filter -->
+        <select id="filterStatus" class="form-input-modern py-2 text-xs w-auto font-semibold">
+          <option value="ALL">All Status</option>
+          <option value="Completed">Completed</option>
+          <option value="Open">Open</option>
+        </select>
+
+        <!-- MULTI-SELECT 1: Machine Code Filter (Select All, Unselect All, Search) -->
+        <div class="relative" id="dropdownMachineFilterWrapper">
+          <button type="button" id="btnToggleMachineDropdown" onclick="toggleMultiSelectDropdown('machine', event)" class="form-input-modern py-1.5 px-3 text-xs w-auto font-semibold flex items-center justify-between gap-2 bg-white hover:bg-slate-50 border border-slate-200 shadow-xs cursor-pointer select-none">
+            <span class="flex items-center gap-1.5 truncate max-w-[150px]">
+              <i class="fa-solid fa-industry text-[#E60012] text-xs"></i>
+              <span id="labelMachineFilter">All Machine Codes</span>
+            </span>
+            <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>
+          </button>
+          <!-- Popover Panel -->
+          <div id="panelMachineDropdown" class="hidden absolute left-0 top-full mt-1.5 w-72 bg-white rounded-xl shadow-2xl border border-slate-200 z-50 p-3 space-y-2">
+            <!-- Search Inside Dropdown -->
+            <div class="relative">
+              <input type="text" id="searchMachineInDropdown" oninput="filterMachineListInDropdown()" placeholder="Search machine code or name..." class="form-input-modern pl-8 py-1.5 text-xs w-full">
+              <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            </div>
+            <!-- Action Buttons: Select All / Unselect All -->
+            <div class="flex items-center justify-between pt-1 border-b border-slate-100 pb-1.5 text-xs">
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="selectAllMachines(true)" class="text-[11px] font-bold text-blue-600 hover:text-blue-800 transition-colors cursor-pointer">
+                  Select All
+                </button>
+                <span class="text-slate-300">|</span>
+                <button type="button" onclick="selectAllMachines(false)" class="text-[11px] font-bold text-slate-500 hover:text-red-600 transition-colors cursor-pointer">
+                  Unselect All
+                </button>
+              </div>
+              <span id="badgeMachineSelectionCount" class="text-[10px] font-mono font-bold text-slate-500 px-1.5 py-0.5 rounded bg-slate-100">All</span>
+            </div>
+            <!-- Scrollable Checkbox List -->
+            <div id="listMachineCheckboxes" class="max-h-56 overflow-y-auto space-y-0.5 pr-1 divide-y divide-slate-50 text-xs">
+              <!-- Dynamically populated in app.js -->
+            </div>
+          </div>
+        </div>
+
+        <!-- MULTI-SELECT 2: Area / Plant Filter (Select All, Unselect All, Search) -->
+        <div class="relative" id="dropdownAreaFilterWrapper">
+          <button type="button" id="btnToggleAreaDropdown" onclick="toggleMultiSelectDropdown('area', event)" class="form-input-modern py-1.5 px-3 text-xs w-auto font-semibold flex items-center justify-between gap-2 bg-white hover:bg-slate-50 border border-slate-200 shadow-xs cursor-pointer select-none">
+            <span class="flex items-center gap-1.5 truncate max-w-[150px]">
+              <i class="fa-solid fa-building-flag text-[#E60012] text-xs"></i>
+              <span id="labelAreaFilter">All Area / Plants</span>
+            </span>
+            <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>
+          </button>
+          <!-- Popover Panel -->
+          <div id="panelAreaDropdown" class="hidden absolute left-0 top-full mt-1.5 w-64 bg-white rounded-xl shadow-2xl border border-slate-200 z-50 p-3 space-y-2">
+            <!-- Search Inside Dropdown -->
+            <div class="relative">
+              <input type="text" id="searchAreaInDropdown" oninput="filterAreaListInDropdown()" placeholder="Search area/plant..." class="form-input-modern pl-8 py-1.5 text-xs w-full">
+              <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            </div>
+            <!-- Action Buttons: Select All / Unselect All -->
+            <div class="flex items-center justify-between pt-1 border-b border-slate-100 pb-1.5 text-xs">
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="selectAllAreas(true)" class="text-[11px] font-bold text-blue-600 hover:text-blue-800 transition-colors cursor-pointer">
+                  Select All
+                </button>
+                <span class="text-slate-300">|</span>
+                <button type="button" onclick="selectAllAreas(false)" class="text-[11px] font-bold text-slate-500 hover:text-red-600 transition-colors cursor-pointer">
+                  Unselect All
+                </button>
+              </div>
+              <span id="badgeAreaSelectionCount" class="text-[10px] font-mono font-bold text-slate-500 px-1.5 py-0.5 rounded bg-slate-100">All</span>
+            </div>
+            <!-- Scrollable Checkbox List -->
+            <div id="listAreaCheckboxes" class="max-h-56 overflow-y-auto space-y-0.5 pr-1 divide-y divide-slate-50 text-xs">
+              <!-- Dynamically populated in app.js -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Hidden legacy Area Filter for backward compatibility -->
+        <select id="filterArea" class="hidden">
+          <option value="ALL">All Areas</option>
+        </select>
+
+        <!-- Process Filter -->
+        <select id="filterProcess" class="form-input-modern py-2 text-xs w-auto font-semibold">
+          <option value="ALL">All Processes</option>
+          <!-- Dynamically populated from YOKOHAMA_PROCESSES in app.js -->
+        </select>
+
+        <!-- Responsible Person Filter -->
+        <select id="filterTechnician" class="form-input-modern py-2 text-xs w-auto font-semibold">
+          <option value="ALL">All Responsible Persons</option>
+          <!-- Dynamically populated from DEFAULT_TECHNICIANS in app.js -->
+        </select>
+
+        <!-- Criticality Filter -->
+        <select id="filterCritical" class="form-input-modern py-2 text-xs w-auto font-semibold" title="Filter by Machine Criticality">
+          <option value="ALL">All Criticality</option>
+          <option value="Yes">Critical Only (Yes)</option>
+          <option value="No">Standard Only (No)</option>
+        </select>
+
+        <!-- Reset All Filters Button -->
+        <button type="button" id="btnResetTableFilters" onclick="resetAllTableFilters()" class="text-xs font-bold px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 border border-slate-200 transition-all flex items-center gap-1.5 cursor-pointer ml-auto" title="Clear all active search and filters">
+          <i class="fa-solid fa-filter-circle-xmark text-slate-500"></i>
+          <span>Reset Filters</span>
+        </button>
+
+      </div>
+
+      <!-- Date-Wise Category Telemetry Strip -->
+      <div id="tableCategoryStrip" class="flex flex-wrap items-center justify-between gap-2 py-2.5 px-3 bg-slate-50 border-b border-slate-200 text-xs rounded-t-lg mt-3">
+        <div class="flex flex-wrap items-center gap-1.5">
+          <span class="font-bold text-slate-800 flex items-center gap-1.5 text-[11px] uppercase tracking-wider">
+            <i class="fa-solid fa-layer-group text-[#E60012]"></i> Category Breakdown:
+          </span>
+          <div id="categoryBadgesStrip" class="flex flex-wrap items-center gap-1.5">
+            <!-- Dynamically populated by updateTableCategoryStrip() -->
+          </div>
+        </div>
+        <div id="dateFilterActiveIndicator" class="text-[11px] font-semibold text-slate-600 bg-white border border-slate-200 px-2.5 py-1 rounded shadow-2xs whitespace-nowrap">
+          <i class="fa-regular fa-calendar text-slate-400 mr-1"></i> All Dates
+        </div>
+      </div>
+
+      <!-- Responsive Table Container -->
+      <div class="overflow-x-auto rounded-b-lg border-x border-b border-slate-200">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-900 text-white text-[11px] uppercase tracking-wider font-bold">
+              <th class="px-4 py-3 font-bold cursor-pointer hover:bg-slate-800 transition-colors" onclick="sortTable('id')" title="Click to sort by Incident ID">
+                Incident ID <i id="sortIcon-id" class="fa-solid fa-sort text-[10px] ml-1 text-slate-400"></i>
+              </th>
+              <th class="px-4 py-3 font-bold cursor-pointer hover:bg-slate-800 transition-colors" onclick="sortTable('date')" title="Click to sort by Issue Date">
+                Issue Date <i id="sortIcon-date" class="fa-solid fa-sort-down text-[10px] ml-1 text-red-400"></i>
+              </th>
+              <th class="px-4 py-3 font-bold cursor-pointer hover:bg-slate-800 transition-colors" onclick="sortTable('nature')" title="Click to sort by Nature">
+                Nature <i id="sortIcon-nature" class="fa-solid fa-sort text-[10px] ml-1 text-slate-400"></i>
+              </th>
+              <th class="px-4 py-3 font-bold cursor-pointer hover:bg-slate-800 transition-colors" onclick="sortTable('category')" title="Click to sort by Category">
+                Category <i id="sortIcon-category" class="fa-solid fa-sort text-[10px] ml-1 text-slate-400"></i>
+              </th>
+              <th class="px-4 py-3 font-bold cursor-pointer hover:bg-slate-800 transition-colors" onclick="sortTable('area')" title="Click to sort by Area">
+                Area <i id="sortIcon-area" class="fa-solid fa-sort text-[10px] ml-1 text-slate-400"></i>
+              </th>
+              <th class="px-4 py-3 font-bold">Machine Code</th>
+              <th class="px-3 py-3 font-bold cursor-pointer hover:bg-slate-800 transition-colors text-right" onclick="sortTable('downtime')" title="Click to sort by Downtime Min per machine">
+                Downtime Min <i id="sortIcon-downtime" class="fa-solid fa-sort text-[10px] ml-1 text-slate-400"></i>
+              </th>
+              <th class="px-3 py-3 font-bold cursor-pointer hover:bg-slate-800 transition-colors text-center" onclick="sortTable('affected')" title="Click to sort by Number of machines affected">
+                Machines Affected <i id="sortIcon-affected" class="fa-solid fa-sort text-[10px] ml-1 text-slate-400"></i>
+              </th>
+              <th class="px-3 py-3 font-bold cursor-pointer hover:bg-slate-800 transition-colors text-right" onclick="sortTable('totalDowntime')" title="Click to sort by Total Downtime Mins">
+                Total DT Mins <i id="sortIcon-totalDowntime" class="fa-solid fa-sort text-[10px] ml-1 text-slate-400"></i>
+              </th>
+              <th class="px-4 py-3 font-bold">Issue Details</th>
+              <th class="px-4 py-3 font-bold cursor-pointer hover:bg-slate-800 transition-colors" onclick="sortTable('tech')" title="Click to sort by Responsible Person">
+                Responsible Person <i id="sortIcon-tech" class="fa-solid fa-sort text-[10px] ml-1 text-slate-400"></i>
+              </th>
+              <th class="px-4 py-3 font-bold">Status</th>
+              <th class="px-4 py-3 font-bold text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="recordsTableBody" class="divide-y divide-slate-200 text-xs bg-white">
+            <!-- Dynamically populated by renderRecordsTable() in app.js -->
+          </tbody>
+        </table>
+      </div>
+
+    </section>
+
+    </div><!-- End of #adminProtectedSections -->
+
+  
+    <!-- =========================================================================
+         TAB 4 VIEW: SYSTEM MASTER SETTINGS & CONFIGURATION (ADMIN ONLY)
+         ========================================================================= -->
+    <div id="viewSettingsContainer" class="hidden space-y-6">
+      
+      <!-- Master Settings Header Banner -->
+      <div class="card-modern p-6 bg-white shadow-xl border-t-4 border-[#E60012] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="inline-block w-2.5 h-6 bg-[#E60012] rounded-sm"></span>
+            <h3 class="text-xl font-black text-slate-900 tracking-tight uppercase">
+              Plant IT Master Settings
+            </h3>
+
+          </div>
+
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="resetMasterSettingsToDefaults()" class="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-all flex items-center gap-1.5" title="Reset all master registry to factory defaults">
+            <i class="fa-solid fa-rotate-left text-slate-500"></i>
+            <span>Reset Defaults</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Settings Sub-Tabs Navigation (Machines, Natures, Categories, Areas, Responsibilities) -->
+      <div class="flex items-center gap-2 border-b border-slate-200 pb-2 overflow-x-auto">
+        <button type="button" onclick="switchSettingsSubTab('machines')" id="subTabBtn-machines" class="px-4 py-2 rounded-lg text-xs font-bold bg-slate-900 text-white shadow-sm transition-all flex items-center gap-2 whitespace-nowrap">
+          <i class="fa-solid fa-industry"></i> Machine Codes Registry
+        </button>
+        <button type="button" onclick="switchSettingsSubTab('natures')" id="subTabBtn-natures" class="px-4 py-2 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all flex items-center gap-2 whitespace-nowrap">
+          <i class="fa-solid fa-shapes"></i> Nature of Issue
+        </button>
+        <button type="button" onclick="switchSettingsSubTab('categories')" id="subTabBtn-categories" class="px-4 py-2 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all flex items-center gap-2 whitespace-nowrap">
+          <i class="fa-solid fa-tags"></i> Failure Categories
+        </button>
+        <button type="button" onclick="switchSettingsSubTab('areas')" id="subTabBtn-areas" class="px-4 py-2 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all flex items-center gap-2 whitespace-nowrap">
+          <i class="fa-solid fa-building-flag"></i> Area / Plant Units
+        </button>
+        <button type="button" onclick="switchSettingsSubTab('responsibilities')" id="subTabBtn-responsibilities" class="px-4 py-2 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all flex items-center gap-2 whitespace-nowrap">
+          <i class="fa-solid fa-users-gear"></i> Responsibility Groups
+        </button>
+        <button type="button" onclick="switchSettingsSubTab('personnel')" id="subTabBtn-personnel" class="px-4 py-2 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all flex items-center gap-2 whitespace-nowrap">
+          <i class="fa-solid fa-user-gear"></i> Responsible Person
+        </button>
+        <button type="button" onclick="switchSettingsSubTab('users')" id="subTabBtn-users" class="px-4 py-2 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all flex items-center gap-2 whitespace-nowrap">
+          <i class="fa-solid fa-user-shield"></i> User Accounts & Passwords
+        </button>
+        <button type="button" onclick="switchSettingsSubTab('maintenance')" id="subTabBtn-maintenance" class="px-4 py-2 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all flex items-center gap-2 whitespace-nowrap">
+          <i class="fa-solid fa-database"></i> Database & Logs Maintenance
+        </button>
+      </div>
+
+      <!-- SUB-PANEL 1: MACHINE CODES REGISTRY -->
+      <div id="settingsPanel-machines" class="space-y-6">
+        <!-- Add / Edit Machine Card -->
+        <div class="card-modern p-6 bg-white shadow-sm border border-slate-200 rounded-xl">
+          <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+            <h4 id="machFormTitle" class="text-sm font-black uppercase text-slate-800 tracking-wider flex items-center gap-2">
+              <i class="fa-solid fa-plus-circle text-[#E60012]"></i> Add New Machine Code
+            </h4>
+            <span id="machEditModeBadge" class="hidden text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">EDITING MODE</span>
+          </div>
+
+          <form id="formAddMachine" onsubmit="handleSaveMachineMaster(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+            <input type="hidden" id="machMasterEditingCode" value="">
+            <div>
+              <label class="form-label-modern" for="machMasterCode">Machine Code <span class="required-star">*</span></label>
+              <input type="text" id="machMasterCode" required placeholder="e.g. US4, T15, EXT-02" class="form-input-modern font-mono font-bold uppercase text-xs">
+            </div>
+            <div>
+              <label class="form-label-modern" for="machMasterName">Machine Name / Type</label>
+              <input type="text" id="machMasterName" placeholder="e.g. Unistage Builder 4" class="form-input-modern text-xs">
+            </div>
+            <div>
+              <label class="form-label-modern" for="machMasterArea">Area / Plant <span class="required-star">*</span></label>
+              <select id="machMasterArea" required class="form-input-modern text-xs font-semibold">
+                <!-- Dynamically populated -->
+              </select>
+            </div>
+            <div>
+              <label class="form-label-modern" for="machMasterProcess">Process Name <span class="required-star">*</span></label>
+              <input type="text" id="machMasterProcess" required placeholder="e.g. Unistage, Stage-1, Mixing" class="form-input-modern text-xs font-semibold">
+            </div>
+            <div>
+              <label class="form-label-modern">Critical Equipment?</label>
+              <div class="flex items-center gap-2">
+                <select id="machMasterCritical" class="form-input-modern text-xs font-bold">
+                  <option value="No">No (Standard)</option>
+                  <option value="Yes">Yes (Critical)</option>
+                </select>
+                <button type="submit" id="btnSaveMachMaster" class="btn-yoko-red px-4 py-2 text-xs font-bold whitespace-nowrap">
+                  <i class="fa-solid fa-plus mr-1"></i> Add
+                </button>
+                <button type="button" id="btnCancelMachEdit" onclick="cancelMachineEdit()" class="hidden px-2.5 py-2 text-xs font-bold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <!-- Machines Directory Table & Live Search -->
+        <div class="card-modern p-6 bg-white shadow-sm border border-slate-200 rounded-xl space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex items-center gap-2 flex-wrap">
+              <h4 class="text-sm font-black uppercase text-slate-800 tracking-wider flex items-center gap-2">
+                <i class="fa-solid fa-list-check text-slate-700"></i> Active Plant Machinery Registry
+              </h4>
+              <span id="machMasterCountBadge" class="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-900 text-white font-mono">0 Machines</span>
+              <button type="button" onclick="document.getElementById('inputMachineMasterExcel').click()" class="ml-2 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 shadow-sm transition-all cursor-pointer" title="Import / Update machines from MAchine master.xlsx">
+                <i class="fa-solid fa-file-excel"></i>
+                <span>Sync from Excel (.xlsx)</span>
+              </button>
+              <input type="file" id="inputMachineMasterExcel" accept=".xlsx,.xls" class="hidden" onchange="handleMachineMasterExcelUpload(event)">
+            </div>
+            <div class="relative w-full sm:w-64">
+              <input type="text" id="machMasterSearch" oninput="renderMasterMachinesTable()" placeholder="Search code, name, process, area..." class="form-input-modern pl-8 py-1.5 text-xs">
+              <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto rounded-lg border border-slate-200 max-h-96 overflow-y-auto">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead class="sticky top-0 bg-slate-900 text-white uppercase text-[10px] tracking-wider z-10">
+                <tr>
+                  <th class="px-3 py-2.5">Code</th>
+                  <th class="px-3 py-2.5">Machine Name</th>
+                  <th class="px-3 py-2.5">Process</th>
+                  <th class="px-3 py-2.5">Area / Plant</th>
+                  <th class="px-3 py-2.5">Criticality</th>
+                  <th class="px-3 py-2.5 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="machMasterTableBody" class="divide-y divide-slate-100 bg-white">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUB-PANEL 2: NATURE OF ISSUE MASTER -->
+      <div id="settingsPanel-natures" class="hidden space-y-6">
+        <div class="card-modern p-6 bg-white shadow-sm border border-slate-200 rounded-xl">
+          <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+            <h4 id="natureFormTitle" class="text-sm font-black uppercase text-slate-800 tracking-wider flex items-center gap-2">
+              <i class="fa-solid fa-plus-circle text-[#E60012]"></i> Add New Nature of Issue
+            </h4>
+            <span id="natureEditModeBadge" class="hidden text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">EDITING MODE</span>
+          </div>
+          <form id="formAddNature" onsubmit="handleSaveNatureMaster(event)" class="flex flex-col sm:flex-row items-end gap-3 max-w-xl">
+            <input type="hidden" id="natureMasterEditingName" value="">
+            <div class="flex-1 w-full">
+              <label class="form-label-modern" for="natureMasterNewName">Nature of Issue Name <span class="required-star">*</span></label>
+              <input type="text" id="natureMasterNewName" required placeholder="e.g. INFRA, MES, NETWORK, HARDWARE, SAP" class="form-input-modern text-xs font-semibold uppercase font-mono">
+            </div>
+            <div class="flex items-center gap-2">
+              <button type="submit" id="btnSaveNatureMaster" class="btn-yoko-red px-5 py-2 text-xs font-bold whitespace-nowrap">
+                <i class="fa-solid fa-plus mr-1"></i> Add Nature
+              </button>
+              <button type="button" id="btnCancelNatureEdit" onclick="cancelNatureEdit()" class="hidden px-3 py-2 text-xs font-bold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200">
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card-modern p-6 bg-white shadow-sm border border-slate-200 rounded-xl space-y-3">
+          <div class="flex items-center justify-between">
+            <h4 class="text-sm font-black uppercase text-slate-800 tracking-wider flex items-center gap-2">
+              <i class="fa-solid fa-shapes text-slate-700"></i> Active Nature of Issue Types
+            </h4>
+            <span id="natureMasterCountBadge" class="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-900 text-white font-mono">0 Natures</span>
+          </div>
+          <div id="natureMasterGrid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 pt-2">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </div>
+
+      <!-- SUB-PANEL 3: FAILURE CATEGORIES MASTER -->
+      <div id="settingsPanel-categories" class="hidden space-y-6">
+        <div class="card-modern p-6 bg-white shadow-sm border border-slate-200 rounded-xl">
+          <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+            <h4 id="catFormTitle" class="text-sm font-black uppercase text-slate-800 tracking-wider flex items-center gap-2">
+              <i class="fa-solid fa-plus-circle text-[#E60012]"></i> Add New Failure Category
+            </h4>
+            <span id="catEditModeBadge" class="hidden text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">EDITING MODE</span>
+          </div>
+          <form id="formAddCategory" onsubmit="handleSaveCategoryMaster(event)" class="flex flex-col sm:flex-row items-end gap-3 max-w-xl">
+            <input type="hidden" id="catMasterEditingName" value="">
+            <div class="flex-1 w-full">
+              <label class="form-label-modern" for="catMasterNewName">Category Name <span class="required-star">*</span></label>
+              <input type="text" id="catMasterNewName" required placeholder="e.g. Robotics, Hydraulic, Vision Sensor" class="form-input-modern text-xs font-semibold">
+            </div>
+            <div class="flex items-center gap-2">
+              <button type="submit" id="btnSaveCatMaster" class="btn-yoko-red px-5 py-2 text-xs font-bold whitespace-nowrap">
+                <i class="fa-solid fa-plus mr-1"></i> Add Category
+              </button>
+              <button type="button" id="btnCancelCatEdit" onclick="cancelCategoryEdit()" class="hidden px-3 py-2 text-xs font-bold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200">
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card-modern p-6 bg-white shadow-sm border border-slate-200 rounded-xl space-y-3">
+          <div class="flex items-center justify-between">
+            <h4 class="text-sm font-black uppercase text-slate-800 tracking-wider flex items-center gap-2">
+              <i class="fa-solid fa-tags text-slate-700"></i> Active Failure Categories
+            </h4>
+            <span id="catMasterCountBadge" class="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-900 text-white font-mono">0 Categories</span>
+          </div>
+          <div id="catMasterGrid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 pt-2">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </div>
+
+      <!-- SUB-PANEL 4: AREA / PLANT MASTER -->
+      <div id="settingsPanel-areas" class="hidden space-y-6">
+        <div class="card-modern p-6 bg-white shadow-sm border border-slate-200 rounded-xl">
+          <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+            <h4 id="areaFormTitle" class="text-sm font-black uppercase text-slate-800 tracking-wider flex items-center gap-2">
+              <i class="fa-solid fa-plus-circle text-[#E60012]"></i> Add New Area / Plant Unit
+            </h4>
+            <span id="areaEditModeBadge" class="hidden text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">EDITING MODE</span>
+          </div>
+          <form id="formAddArea" onsubmit="handleSaveAreaMaster(event)" class="flex flex-col sm:flex-row items-end gap-3 max-w-xl">
+            <input type="hidden" id="areaMasterEditingName" value="">
+            <div class="flex-1 w-full">
+              <label class="form-label-modern" for="areaMasterNewName">Area / Plant Unit Name <span class="required-star">*</span></label>
+              <input type="text" id="areaMasterNewName" required placeholder="e.g. Plant 5, Boiler House, Canteen IT" class="form-input-modern text-xs font-semibold">
+            </div>
+            <div class="flex items-center gap-2">
+              <button type="submit" id="btnSaveAreaMaster" class="btn-yoko-red px-5 py-2 text-xs font-bold whitespace-nowrap">
+                <i class="fa-solid fa-plus mr-1"></i> Add Area / Plant
+              </button>
+              <button type="button" id="btnCancelAreaEdit" onclick="cancelAreaEdit()" class="hidden px-3 py-2 text-xs font-bold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200">
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card-modern p-6 bg-white shadow-sm border border-slate-200 rounded-xl space-y-3">
+          <div class="flex items-center justify-between">
+            <h4 class="text-sm font-black uppercase text-slate-800 tracking-wider flex items-center gap-2">
+              <i class="fa-solid fa-building-flag text-slate-700"></i> Active Plant Area Units
+            </h4>
+            <span id="areaMasterCountBadge" class="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-900 text-white font-mono">0 Areas</span>
+          </div>
+          <div id="areaMasterGrid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 pt-2">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </div>
+
+      <!-- SUB-PANEL 5: RESPONSIBILITY MASTER -->
+      <div id="settingsPanel-responsibilities" class="hidden space-y-6">
+        <div class="card-modern p-6 bg-white shadow-sm border border-slate-200 rounded-xl">
+          <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+            <h4 id="respFormTitle" class="text-sm font-black uppercase text-slate-800 tracking-wider flex items-center gap-2">
+              <i class="fa-solid fa-plus-circle text-[#E60012]"></i> Add New Responsibility Group
+            </h4>
+            <span id="respEditModeBadge" class="hidden text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">EDITING MODE</span>
+          </div>
+          <form id="formAddResp" onsubmit="handleSaveRespMaster(event)" class="flex flex-col sm:flex-row items-end gap-3 max-w-xl">
+            <input type="hidden" id="respMasterEditingName" value="">
+            <div class="flex-1 w-full">
+              <label class="form-label-modern" for="respMasterNewName">Responsibility Group Name <span class="required-star">*</span></label>
+              <input type="text" id="respMasterNewName" required placeholder="e.g. Siemens, Rockwell, Vendor X" class="form-input-modern text-xs font-semibold">
+            </div>
+            <div class="flex items-center gap-2">
+              <button type="submit" id="btnSaveRespMaster" class="btn-yoko-red px-5 py-2 text-xs font-bold whitespace-nowrap">
+                <i class="fa-solid fa-plus mr-1"></i> Add Responsibility
+              </button>
+              <button type="button" id="btnCancelRespEdit" onclick="cancelResponsibilityEdit()" class="hidden px-3 py-2 text-xs font-bold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200">
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card-modern p-6 bg-white shadow-sm border border-slate-200 rounded-xl space-y-3">
+          <div class="flex items-center justify-between">
+            <h4 class="text-sm font-black uppercase text-slate-800 tracking-wider flex items-center gap-2">
+              <i class="fa-solid fa-users-gear text-slate-700"></i> Active Responsibility Groups
+            </h4>
+            <span id="respMasterCountBadge" class="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-900 text-white font-mono">0 Groups</span>
+          </div>
+          <div id="respMasterGrid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 pt-2">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </div>
+
+      <!-- SUB-PANEL 6: RESPONSIBLE PERSON (PERSONNEL) MASTER -->
+      <div id="settingsPanel-personnel" class="hidden space-y-6">
+        <div class="card-modern p-6 bg-white shadow-sm border border-slate-200 rounded-xl">
+          <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+            <h4 id="personnelFormTitle" class="text-sm font-black uppercase text-slate-800 tracking-wider flex items-center gap-2">
+              <i class="fa-solid fa-user-plus text-[#E60012]"></i> Add New Responsible Person
+            </h4>
+            <span id="personnelEditModeBadge" class="hidden text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">EDITING MODE</span>
+          </div>
+          <form id="formAddPersonnel" onsubmit="handleSavePersonnelMaster(event)" class="flex flex-col sm:flex-row items-end gap-3 max-w-xl">
+            <input type="hidden" id="personnelMasterEditingName" value="">
+            <div class="flex-1 w-full">
+              <label class="form-label-modern" for="personnelMasterNewName">Responsible Person Name <span class="required-star">*</span></label>
+              <input type="text" id="personnelMasterNewName" required placeholder="e.g. John Doe, Rajesh M, Shift Tech A" class="form-input-modern text-xs font-semibold">
+            </div>
+            <div class="flex items-center gap-2">
+              <button type="submit" id="btnSavePersonnelMaster" class="btn-yoko-red px-5 py-2 text-xs font-bold whitespace-nowrap">
+                <i class="fa-solid fa-plus mr-1"></i> Add Person
+              </button>
+              <button type="button" id="btnCancelPersonnelEdit" onclick="cancelPersonnelEdit()" class="hidden px-3 py-2 text-xs font-bold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200">
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card-modern p-6 bg-white shadow-sm border border-slate-200 rounded-xl space-y-3">
+          <div class="flex items-center justify-between">
+            <h4 class="text-sm font-black uppercase text-slate-800 tracking-wider flex items-center gap-2">
+              <i class="fa-solid fa-users text-slate-700"></i> Active Responsible Persons
+            </h4>
+            <span id="personnelMasterCountBadge" class="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-900 text-white font-mono">9 Persons</span>
+          </div>
+          <div id="personnelMasterGrid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 pt-2">
+            <div class="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between gap-2 shadow-2xs hover:bg-white hover:border-slate-300 transition-all group">
+              <div class="flex items-center gap-2 overflow-hidden">
+                <div class="w-6 h-6 rounded-full bg-red-50 text-[#E60012] border border-red-200 flex items-center justify-center font-bold text-[10px] shrink-0">
+                  B
+                </div>
+                <span class="font-bold text-xs text-slate-800 tracking-wide truncate" title="Bharadwaj">Bharadwaj</span>
+              </div>
+              <div class="flex items-center gap-1 shrink-0">
+                <button type="button" onclick="editPersonnelMaster('Bharadwaj')" class="p-1.5 text-slate-400 hover:text-blue-600 rounded transition-colors" title="Edit name">
+                  <i class="fa-solid fa-pencil text-xs"></i>
+                </button>
+                <button type="button" onclick="deletePersonnelMaster('Bharadwaj')" class="p-1.5 text-slate-400 hover:text-red-600 rounded transition-colors" title="Remove person">
+                  <i class="fa-solid fa-trash-can text-xs"></i>
+                </button>
+              </div>
+            </div>
+            <div class="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between gap-2 shadow-2xs hover:bg-white hover:border-slate-300 transition-all group">
+              <div class="flex items-center gap-2 overflow-hidden">
+                <div class="w-6 h-6 rounded-full bg-red-50 text-[#E60012] border border-red-200 flex items-center justify-center font-bold text-[10px] shrink-0">
+                  J
+                </div>
+                <span class="font-bold text-xs text-slate-800 tracking-wide truncate" title="Jagadeesh">Jagadeesh</span>
+              </div>
+              <div class="flex items-center gap-1 shrink-0">
+                <button type="button" onclick="editPersonnelMaster('Jagadeesh')" class="p-1.5 text-slate-400 hover:text-blue-600 rounded transition-colors" title="Edit name">
+                  <i class="fa-solid fa-pencil text-xs"></i>
+                </button>
+                <button type="button" onclick="deletePersonnelMaster('Jagadeesh')" class="p-1.5 text-slate-400 hover:text-red-600 rounded transition-colors" title="Remove person">
+                  <i class="fa-solid fa-trash-can text-xs"></i>
+                </button>
+              </div>
+            </div>
+            <div class="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between gap-2 shadow-2xs hover:bg-white hover:border-slate-300 transition-all group">
+              <div class="flex items-center gap-2 overflow-hidden">
+                <div class="w-6 h-6 rounded-full bg-red-50 text-[#E60012] border border-red-200 flex items-center justify-center font-bold text-[10px] shrink-0">
+                  S
+                </div>
+                <span class="font-bold text-xs text-slate-800 tracking-wide truncate" title="Srinivas">Srinivas</span>
+              </div>
+              <div class="flex items-center gap-1 shrink-0">
+                <button type="button" onclick="editPersonnelMaster('Srinivas')" class="p-1.5 text-slate-400 hover:text-blue-600 rounded transition-colors" title="Edit name">
+                  <i class="fa-solid fa-pencil text-xs"></i>
+                </button>
+                <button type="button" onclick="deletePersonnelMaster('Srinivas')" class="p-1.5 text-slate-400 hover:text-red-600 rounded transition-colors" title="Remove person">
+                  <i class="fa-solid fa-trash-can text-xs"></i>
+                </button>
+              </div>
+            </div>
+            <div class="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between gap-2 shadow-2xs hover:bg-white hover:border-slate-300 transition-all group">
+              <div class="flex items-center gap-2 overflow-hidden">
+                <div class="w-6 h-6 rounded-full bg-red-50 text-[#E60012] border border-red-200 flex items-center justify-center font-bold text-[10px] shrink-0">
+                  N
+                </div>
+                <span class="font-bold text-xs text-slate-800 tracking-wide truncate" title="Narayana">Narayana</span>
+              </div>
+              <div class="flex items-center gap-1 shrink-0">
+                <button type="button" onclick="editPersonnelMaster('Narayana')" class="p-1.5 text-slate-400 hover:text-blue-600 rounded transition-colors" title="Edit name">
+                  <i class="fa-solid fa-pencil text-xs"></i>
+                </button>
+                <button type="button" onclick="deletePersonnelMaster('Narayana')" class="p-1.5 text-slate-400 hover:text-red-600 rounded transition-colors" title="Remove person">
+                  <i class="fa-solid fa-trash-can text-xs"></i>
+                </button>
+              </div>
+            </div>
+            <div class="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between gap-2 shadow-2xs hover:bg-white hover:border-slate-300 transition-all group">
+              <div class="flex items-center gap-2 overflow-hidden">
+                <div class="w-6 h-6 rounded-full bg-red-50 text-[#E60012] border border-red-200 flex items-center justify-center font-bold text-[10px] shrink-0">
+                  P
+                </div>
+                <span class="font-bold text-xs text-slate-800 tracking-wide truncate" title="Pardhu">Pardhu</span>
+              </div>
+              <div class="flex items-center gap-1 shrink-0">
+                <button type="button" onclick="editPersonnelMaster('Pardhu')" class="p-1.5 text-slate-400 hover:text-blue-600 rounded transition-colors" title="Edit name">
+                  <i class="fa-solid fa-pencil text-xs"></i>
+                </button>
+                <button type="button" onclick="deletePersonnelMaster('Pardhu')" class="p-1.5 text-slate-400 hover:text-red-600 rounded transition-colors" title="Remove person">
+                  <i class="fa-solid fa-trash-can text-xs"></i>
+                </button>
+              </div>
+            </div>
+            <div class="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between gap-2 shadow-2xs hover:bg-white hover:border-slate-300 transition-all group">
+              <div class="flex items-center gap-2 overflow-hidden">
+                <div class="w-6 h-6 rounded-full bg-red-50 text-[#E60012] border border-red-200 flex items-center justify-center font-bold text-[10px] shrink-0">
+                  R
+                </div>
+                <span class="font-bold text-xs text-slate-800 tracking-wide truncate" title="Ramesh Kumar">Ramesh Kumar</span>
+              </div>
+              <div class="flex items-center gap-1 shrink-0">
+                <button type="button" onclick="editPersonnelMaster('Ramesh Kumar')" class="p-1.5 text-slate-400 hover:text-blue-600 rounded transition-colors" title="Edit name">
+                  <i class="fa-solid fa-pencil text-xs"></i>
+                </button>
+                <button type="button" onclick="deletePersonnelMaster('Ramesh Kumar')" class="p-1.5 text-slate-400 hover:text-red-600 rounded transition-colors" title="Remove person">
+                  <i class="fa-solid fa-trash-can text-xs"></i>
+                </button>
+              </div>
+            </div>
+            <div class="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between gap-2 shadow-2xs hover:bg-white hover:border-slate-300 transition-all group">
+              <div class="flex items-center gap-2 overflow-hidden">
+                <div class="w-6 h-6 rounded-full bg-red-50 text-[#E60012] border border-red-200 flex items-center justify-center font-bold text-[10px] shrink-0">
+                  K
+                </div>
+                <span class="font-bold text-xs text-slate-800 tracking-wide truncate" title="Karthik V">Karthik V</span>
+              </div>
+              <div class="flex items-center gap-1 shrink-0">
+                <button type="button" onclick="editPersonnelMaster('Karthik V')" class="p-1.5 text-slate-400 hover:text-blue-600 rounded transition-colors" title="Edit name">
+                  <i class="fa-solid fa-pencil text-xs"></i>
+                </button>
+                <button type="button" onclick="deletePersonnelMaster('Karthik V')" class="p-1.5 text-slate-400 hover:text-red-600 rounded transition-colors" title="Remove person">
+                  <i class="fa-solid fa-trash-can text-xs"></i>
+                </button>
+              </div>
+            </div>
+            <div class="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between gap-2 shadow-2xs hover:bg-white hover:border-slate-300 transition-all group">
+              <div class="flex items-center gap-2 overflow-hidden">
+                <div class="w-6 h-6 rounded-full bg-red-50 text-[#E60012] border border-red-200 flex items-center justify-center font-bold text-[10px] shrink-0">
+                  M
+                </div>
+                <span class="font-bold text-xs text-slate-800 tracking-wide truncate" title="MELSS Team">MELSS Team</span>
+              </div>
+              <div class="flex items-center gap-1 shrink-0">
+                <button type="button" onclick="editPersonnelMaster('MELSS Team')" class="p-1.5 text-slate-400 hover:text-blue-600 rounded transition-colors" title="Edit name">
+                  <i class="fa-solid fa-pencil text-xs"></i>
+                </button>
+                <button type="button" onclick="deletePersonnelMaster('MELSS Team')" class="p-1.5 text-slate-400 hover:text-red-600 rounded transition-colors" title="Remove person">
+                  <i class="fa-solid fa-trash-can text-xs"></i>
+                </button>
+              </div>
+            </div>
+            <div class="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between gap-2 shadow-2xs hover:bg-white hover:border-slate-300 transition-all group">
+              <div class="flex items-center gap-2 overflow-hidden">
+                <div class="w-6 h-6 rounded-full bg-red-50 text-[#E60012] border border-red-200 flex items-center justify-center font-bold text-[10px] shrink-0">
+                  A
+                </div>
+                <span class="font-bold text-xs text-slate-800 tracking-wide truncate" title="ATC IT Team">ATC IT Team</span>
+              </div>
+              <div class="flex items-center gap-1 shrink-0">
+                <button type="button" onclick="editPersonnelMaster('ATC IT Team')" class="p-1.5 text-slate-400 hover:text-blue-600 rounded transition-colors" title="Edit name">
+                  <i class="fa-solid fa-pencil text-xs"></i>
+                </button>
+                <button type="button" onclick="deletePersonnelMaster('ATC IT Team')" class="p-1.5 text-slate-400 hover:text-red-600 rounded transition-colors" title="Remove person">
+                  <i class="fa-solid fa-trash-can text-xs"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUB-PANEL 7: USER ACCOUNTS & PASSWORDS MASTER -->
+      <div id="settingsPanel-users" class="hidden space-y-6">
+        <!-- 3 Role Credential Cards Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+          <!-- CARD 1: ADMIN ACCOUNT -->
+          <div class="card-modern p-6 bg-white shadow-sm border border-slate-200 rounded-xl flex flex-col justify-between space-y-4">
+            <div>
+              <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+                <div class="flex items-center gap-2">
+                  <div class="w-8 h-8 rounded-lg bg-red-50 text-[#E60012] border border-red-200 flex items-center justify-center font-bold text-sm">
+                    <i class="fa-solid fa-shield-halved"></i>
+                  </div>
+                  <div>
+                    <h5 class="text-xs font-black uppercase text-slate-900 tracking-wider">Admin Account</h5>
+                    <span class="text-[10px] font-bold text-red-600 font-mono">FULL ACCESS + SETTINGS</span>
+                  </div>
+                </div>
+                <span class="px-2 py-0.5 rounded text-[10px] font-black bg-red-100 text-red-700 font-mono">ADMIN</span>
+              </div>
+
+              <form id="formUserAdmin" onsubmit="handleUpdateUserAccount(event, 'admin')" class="space-y-3">
+                <div>
+                  <label class="form-label-modern" for="userAdminDisplayName">Display Name</label>
+                  <input type="text" id="userAdminDisplayName" value="Plant IT Admin" required class="form-input-modern text-xs font-semibold">
+                </div>
+                <div>
+                  <label class="form-label-modern" for="userAdminUsername">Login Username <span class="required-star">*</span></label>
+                  <input type="text" id="userAdminUsername" value="admin" required class="form-input-modern font-mono text-xs font-bold text-slate-800">
+                </div>
+                <div>
+                  <label class="form-label-modern" for="userAdminNewPass">New Password</label>
+                  <div class="relative">
+                    <input type="password" id="userAdminNewPass" placeholder="Leave blank to keep current" minlength="4" class="form-input-modern text-xs pr-8 font-mono">
+                    <button type="button" onclick="toggleUserCardPassVisibility('userAdminNewPass', 'iconPassAdmin')" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                      <i id="iconPassAdmin" class="fa-solid fa-eye text-xs"></i>
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label class="form-label-modern" for="userAdminConfirmPass">Confirm New Password</label>
+                  <input type="password" id="userAdminConfirmPass" placeholder="Re-type new password" class="form-input-modern text-xs font-mono">
+                </div>
+                <div class="pt-2">
+                  <button type="submit" id="btnSaveUserAdmin" class="btn-yoko-red w-full py-2 text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    <span>Save Admin Credentials</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+            <div class="pt-3 border-t border-slate-100 text-[10px] text-slate-400 flex items-center justify-between">
+              <span>Full Access & Configuration</span>
+              <span id="badgeAdminStatus" class="text-emerald-600 font-bold font-mono"><i class="fa-solid fa-circle-check"></i> Ready</span>
+            </div>
+          </div>
+
+          <!-- CARD 2: SUPERVISOR ACCOUNT -->
+          <div class="card-modern p-6 bg-white shadow-sm border border-slate-200 rounded-xl flex flex-col justify-between space-y-4">
+            <div>
+              <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+                <div class="flex items-center gap-2">
+                  <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center font-bold text-sm">
+                    <i class="fa-solid fa-chart-pie"></i>
+                  </div>
+                  <div>
+                    <h5 class="text-xs font-black uppercase text-slate-900 tracking-wider">Supervisor Account</h5>
+                    <span class="text-[10px] font-bold text-blue-600 font-mono">ENTRY + KPI + LOGS + EXPORT</span>
+                  </div>
+                </div>
+                <span class="px-2 py-0.5 rounded text-[10px] font-black bg-blue-100 text-blue-700 font-mono">SUPERVISOR</span>
+              </div>
+
+              <form id="formUserSupervisor" onsubmit="handleUpdateUserAccount(event, 'supervisor')" class="space-y-3">
+                <div>
+                  <label class="form-label-modern" for="userSupervisorDisplayName">Display Name</label>
+                  <input type="text" id="userSupervisorDisplayName" value="Production Supervisor" required class="form-input-modern text-xs font-semibold">
+                </div>
+                <div>
+                  <label class="form-label-modern" for="userSupervisorUsername">Login Username <span class="required-star">*</span></label>
+                  <input type="text" id="userSupervisorUsername" value="supervisor" required class="form-input-modern font-mono text-xs font-bold text-slate-800">
+                </div>
+                <div>
+                  <label class="form-label-modern" for="userSupervisorNewPass">New Password</label>
+                  <div class="relative">
+                    <input type="password" id="userSupervisorNewPass" placeholder="Leave blank to keep current" minlength="4" class="form-input-modern text-xs pr-8 font-mono">
+                    <button type="button" onclick="toggleUserCardPassVisibility('userSupervisorNewPass', 'iconPassSupervisor')" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                      <i id="iconPassSupervisor" class="fa-solid fa-eye text-xs"></i>
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label class="form-label-modern" for="userSupervisorConfirmPass">Confirm New Password</label>
+                  <input type="password" id="userSupervisorConfirmPass" placeholder="Re-type new password" class="form-input-modern text-xs font-mono">
+                </div>
+                <div class="pt-2">
+                  <button type="submit" id="btnSaveUserSupervisor" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white w-full text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    <span>Save Supervisor Credentials</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+            <div class="pt-3 border-t border-slate-100 text-[10px] text-slate-400 flex items-center justify-between">
+              <span>Entry, KPI, Logs, Report Download</span>
+              <span id="badgeSupervisorStatus" class="text-emerald-600 font-bold font-mono"><i class="fa-solid fa-circle-check"></i> Ready</span>
+            </div>
+          </div>
+
+          <!-- CARD 3: OPERATOR ACCOUNT -->
+          <div class="card-modern p-6 bg-white shadow-sm border border-slate-200 rounded-xl flex flex-col justify-between space-y-4">
+            <div>
+              <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+                <div class="flex items-center gap-2">
+                  <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center font-bold text-sm">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                  </div>
+                  <div>
+                    <h5 class="text-xs font-black uppercase text-slate-900 tracking-wider">Operator Account</h5>
+                    <span class="text-[10px] font-bold text-emerald-600 font-mono">INCIDENT ENTRY ONLY</span>
+                  </div>
+                </div>
+                <span class="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-100 text-emerald-700 font-mono">OPERATOR</span>
+              </div>
+
+              <form id="formUserOperator" onsubmit="handleUpdateUserAccount(event, 'operator')" class="space-y-3">
+                <div>
+                  <label class="form-label-modern" for="userOperatorDisplayName">Display Name</label>
+                  <input type="text" id="userOperatorDisplayName" value="Plant Operator" required class="form-input-modern text-xs font-semibold">
+                </div>
+                <div>
+                  <label class="form-label-modern" for="userOperatorUsername">Login Username <span class="required-star">*</span></label>
+                  <input type="text" id="userOperatorUsername" value="operator" required class="form-input-modern font-mono text-xs font-bold text-slate-800">
+                </div>
+                <div>
+                  <label class="form-label-modern" for="userOperatorNewPass">New Password</label>
+                  <div class="relative">
+                    <input type="password" id="userOperatorNewPass" placeholder="Leave blank to keep current" minlength="4" class="form-input-modern text-xs pr-8 font-mono">
+                    <button type="button" onclick="toggleUserCardPassVisibility('userOperatorNewPass', 'iconPassOperator')" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                      <i id="iconPassOperator" class="fa-solid fa-eye text-xs"></i>
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label class="form-label-modern" for="userOperatorConfirmPass">Confirm New Password</label>
+                  <input type="password" id="userOperatorConfirmPass" placeholder="Re-type new password" class="form-input-modern text-xs font-mono">
+                </div>
+                <div class="pt-2">
+                  <button type="submit" id="btnSaveUserOperator" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white w-full text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    <span>Save Operator Credentials</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+            <div class="pt-3 border-t border-slate-100 text-[10px] text-slate-400 flex items-center justify-between">
+              <span>Incident Logging Form Only</span>
+              <span id="badgeOperatorStatus" class="text-emerald-600 font-bold font-mono"><i class="fa-solid fa-circle-check"></i> Ready</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- SUB-PANEL 8: DATABASE & INCIDENT LOGS MAINTENANCE -->
+      <div id="settingsPanel-maintenance" class="hidden space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          
+          <!-- Card 1: Clear / Empty Incident Logs -->
+          <div class="card-modern p-6 bg-white shadow-sm border border-slate-200 rounded-xl flex flex-col justify-between space-y-4">
+            <div>
+              <div class="flex items-center gap-3 pb-3 mb-4 border-b border-slate-100">
+                <div class="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center font-bold text-base">
+                  <i class="fa-solid fa-trash-can"></i>
+                </div>
+                <div>
+                  <h5 class="text-sm font-black uppercase text-slate-900 tracking-wider">Empty Incident Logs</h5>
+                  <span class="text-xs text-slate-500">Reset incident logs and metrics to a completely empty state</span>
+                </div>
+              </div>
+              <p class="text-xs text-slate-600 leading-relaxed mb-4">
+                Clicking this will remove all incident log entries from the database, resetting Total Incidents to 0 and Downtime Hours to 0.0 hrs. Machine registry, plant areas, and user logins will remain intact.
+              </p>
+              <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between text-xs font-mono">
+                <span class="text-slate-600">Current Log Status:</span>
+                <span id="maintenanceLogCount" class="font-bold text-slate-900">0 Incidents</span>
+              </div>
+            </div>
+            <div class="pt-2">
+              <button type="button" onclick="clearAllIncidentLogs()" class="w-full px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all active:scale-98 cursor-pointer">
+                <i class="fa-solid fa-broom"></i>
+                <span>Empty All Incident Logs Now</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Card 2: Restore Demo Incidents -->
+          <div class="card-modern p-6 bg-white shadow-sm border border-slate-200 rounded-xl flex flex-col justify-between space-y-4">
+            <div>
+              <div class="flex items-center gap-3 pb-3 mb-4 border-b border-slate-100">
+                <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center font-bold text-base">
+                  <i class="fa-solid fa-rotate-left"></i>
+                </div>
+                <div>
+                  <h5 class="text-sm font-black uppercase text-slate-900 tracking-wider">Restore Demo Incidents</h5>
+                  <span class="text-xs text-slate-500">Restore the 673 historical Yokohama incident dataset</span>
+                </div>
+              </div>
+              <p class="text-xs text-slate-600 leading-relaxed mb-4">
+                Need to restore sample demo data for training or demonstrations? This safely restores the original 673 plant downtime incident tickets across all machines.
+              </p>
+              <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between text-xs font-mono">
+                <span class="text-slate-600">Demo Records Available:</span>
+                <span class="font-bold text-blue-600">673 Records</span>
+              </div>
+            </div>
+            <div class="pt-2">
+              <button type="button" onclick="restoreDemoIncidents()" class="w-full px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all active:scale-98 cursor-pointer">
+                <i class="fa-solid fa-database"></i>
+                <span>Restore 673 Demo Incidents</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Card 3: Import Daily Downtime Excel -->
+          <div class="card-modern p-6 bg-white shadow-sm border border-slate-200 rounded-xl flex flex-col justify-between space-y-4">
+            <div>
+              <div class="flex items-center gap-3 pb-3 mb-4 border-b border-slate-100">
+                <div class="w-10 h-10 rounded-xl bg-violet-50 text-violet-600 border border-violet-200 flex items-center justify-center font-bold text-base">
+                  <i class="fa-solid fa-file-import"></i>
+                </div>
+                <div>
+                  <h5 class="text-sm font-black uppercase text-slate-900 tracking-wider">Import Downtime Excel</h5>
+                  <span class="text-xs text-slate-500">Map and import Daily Downtime Entry sheet (.xlsx)</span>
+                </div>
+              </div>
+              <p class="text-xs text-slate-600 leading-relaxed mb-4">
+                Upload or drop <span class="font-mono font-bold text-slate-800">Daily Downtime Entry sheet Import file.xlsx</span>. The portal automatically maps Machine Code, Area, Process, Downtime Minutes, Nature, Category, and Action Plans.
+              </p>
+              <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between text-xs font-mono">
+                <span class="text-slate-600">Daily Downtime Dataset:</span>
+                <span class="font-bold text-violet-600">38 Incident Records</span>
+              </div>
+            </div>
+            <div class="pt-2">
+              <button type="button" onclick="openImportDowntimeModal()" class="w-full px-4 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all active:scale-98 cursor-pointer">
+                <i class="fa-solid fa-file-import"></i>
+                <span>Open Excel Importer</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+    </main>
+  </div><!-- End of #downtimeAppContainer -->
+
+  <!-- =========================================================================
+       MODAL: FULL RECORD DETAILS VIEWER
+       ========================================================================= -->
+  <div id="detailsModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop hidden">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6 relative border-t-4 border-[#E60012] animate-scale-up">
+      
+      <button onclick="closeDetailsModal()" class="absolute right-4 top-4 text-slate-400 hover:text-slate-800 p-2 rounded-lg">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+
+      <div class="pb-3 border-b border-slate-100 mb-3">
+        <span class="text-xs font-bold text-slate-400 font-mono">PLANT IT DOWNTIME TICKET</span>
+      </div>
+
+      <div id="modalDetailsContent">
+        <!-- Injected via JavaScript -->
+      </div>
+
+      <div class="mt-6 pt-4 border-t border-slate-200 flex justify-end gap-2">
+        <button onclick="closeDetailsModal()" class="btn-yoko-black text-xs py-2 px-5">
+          Close
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container"></div>
+
+  <!-- Footer -->
+  <footer class="bg-[#0F1115] text-slate-400 text-xs py-6 border-t border-slate-800 mt-12 no-print">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div>
+        <span class="font-bold text-slate-300">Plant IT Downtime Management Portal</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Application Logic -->
+  <script src="app.js?v=3.7"></script>
+
+  <!-- =========================================================================
+       MODAL: EXPORT REPORT BY DATE OR MONTH (EXECUTIVE EXCEL & CSV)
+       ========================================================================= -->
+  <div id="dateExportModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 animate-scale-up">
+      
+      <!-- Modal Header -->
+      <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b-2 border-[#E60012]">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-red-600/20 text-[#E60012] flex items-center justify-center">
+            <i class="fa-regular fa-calendar-check text-base"></i>
+          </div>
+          <div>
+            <h3 class="font-black text-sm uppercase tracking-wider">Export Report by Date or Month</h3>
+            
+          </div>
+        </div>
+        <button type="button" onclick="closeDateExportModal()" class="text-slate-400 hover:text-white transition-colors p-1 text-base" title="Close modal">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-6 space-y-5">
+        
+        <!-- Selection Mode Tabs -->
+        <div>
+          <label class="form-label-modern mb-2">Select Export Scope</label>
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" id="btnExportModeMonth" onclick="setExportModalMode('month')" class="py-2.5 px-3 rounded-xl text-xs font-black bg-slate-900 text-white border border-slate-900 transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer">
+              <i class="fa-regular fa-calendar text-xs"></i> By Month
+            </button>
+            <button type="button" id="btnExportModeCustom" onclick="setExportModalMode('custom')" class="py-2.5 px-3 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 transition-all flex items-center justify-center gap-2 cursor-pointer">
+              <i class="fa-solid fa-calendar-day text-xs"></i> Custom Date Range
+            </button>
+          </div>
+        </div>
+
+        <!-- Mode 1: Month Dropdown -->
+        <div id="exportModalMonthSection" class="space-y-1.5">
+          <label class="form-label-modern" for="exportModalMonthSelect">Choose Month <span class="required-star">*</span></label>
+          <select id="exportModalMonthSelect" onchange="updateExportModalPreview()" class="form-input-modern font-bold text-slate-800 text-xs">
+            <!-- Dynamically populated -->
+          </select>
+        </div>
+
+        <!-- Mode 2: Custom Date Range (hidden initially) -->
+        <div id="exportModalCustomSection" class="hidden space-y-2">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="form-label-modern" for="exportModalStartDate">From Date <span class="required-star">*</span></label>
+              <input type="date" id="exportModalStartDate" onchange="updateExportModalPreview()" class="form-input-modern text-xs font-bold text-slate-800">
+            </div>
+            <div>
+              <label class="form-label-modern" for="exportModalEndDate">To Date <span class="required-star">*</span></label>
+              <input type="date" id="exportModalEndDate" onchange="updateExportModalPreview()" class="form-input-modern text-xs font-bold text-slate-800">
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Period Telemetry Preview Card -->
+        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+          <div class="flex items-center justify-between border-b border-slate-200 pb-2">
+            <span class="text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono flex items-center gap-1.5">
+              <i class="fa-solid fa-chart-pie text-[#E60012]"></i> Period Summary:
+            </span>
+            <span id="exportModalPeriodBadge" class="px-2.5 py-0.5 rounded text-[10px] font-black bg-slate-900 text-white font-mono">
+              January 2026
+            </span>
+          </div>
+          
+          <div class="grid grid-cols-3 gap-2 text-center">
+            <div class="p-2.5 bg-white rounded-xl border border-slate-200 shadow-2xs">
+              <span class="text-[10px] text-slate-400 uppercase font-bold block">Incident Events</span>
+              <span id="exportModalIncCount" class="text-base font-black text-slate-900 font-mono">0</span>
+            </div>
+            <div class="p-2.5 bg-white rounded-xl border border-slate-200 shadow-2xs">
+              <span class="text-[10px] text-slate-400 uppercase font-bold block">Total Downtime</span>
+              <span id="exportModalDtHours" class="text-base font-black text-[#E60012] font-mono">0.0h</span>
+            </div>
+            <div class="p-2.5 bg-white rounded-xl border border-slate-200 shadow-2xs">
+              <span class="text-[10px] text-slate-400 uppercase font-bold block">Uptime Availability</span>
+              <span id="exportModalAvail" class="text-base font-black text-emerald-600 font-mono">100%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dynamic Excel Format Note -->
+        <div class="flex items-center justify-between px-3 py-2 rounded-xl bg-emerald-50/70 border border-emerald-200 text-xs">
+          <div class="flex items-center gap-2 text-emerald-900 font-semibold">
+            <i class="fa-solid fa-file-excel text-emerald-600"></i>
+            <span id="exportModalFormatNote">Export Format: Multi-Sheet Excel (Logs + Total Month Uptime Matrix + All Monthly Sheets)</span>
+          </div>
+          <span id="exportModalFormatBadge" class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-600 text-white">ALL MONTHS</span>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer Action Buttons -->
+      <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
+        <button type="button" onclick="closeDateExportModal()" class="px-3.5 py-2 text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer">
+          Cancel
+        </button>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="executeExportFromModal('csv')" class="px-3.5 py-2 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1.5 shadow-sm transition-all border border-blue-700 active:scale-95 cursor-pointer">
+            <i class="fa-solid fa-file-csv"></i> Download CSV
+          </button>
+          <button type="button" onclick="executeExportFromModal('excel')" class="px-4 py-2 text-xs font-black rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 shadow-sm transition-all border border-emerald-700 active:scale-95 cursor-pointer" title="Export dual-sheet Excel (.xlsx) with Incident Logs & Uptime Matrix">
+            <i class="fa-solid fa-file-excel"></i> Download Excel (.xlsx)
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL: IMPORT DAILY DOWNTIME ENTRY EXCEL FILE (.XLSX)
+       ========================================================================= -->
+  <div id="importDowntimeModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 animate-scale-up">
+      
+      <!-- Modal Header -->
+      <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b-2 border-[#E60012] flex-shrink-0">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-violet-600/20 text-violet-400 flex items-center justify-center">
+            <i class="fa-solid fa-file-import text-base"></i>
+          </div>
+          <div>
+            <h3 class="font-black text-sm uppercase tracking-wider">Import Daily Downtime Entry Excel</h3>
+            <p class="text-[11px] text-slate-400">Map & import plant downtime incident logs from .xlsx</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeImportDowntimeModal()" class="text-slate-400 hover:text-white transition-colors p-1 text-base cursor-pointer" title="Close modal">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body (Scrollable) -->
+      <div class="p-6 space-y-5 overflow-y-auto flex-1">
+        
+        <!-- Drag & Drop Zone + File Selector -->
+        <div id="dropZoneDowntimeExcel" ondragover="handleDowntimeDragOver(event)" ondragleave="handleDowntimeDragLeave(event)" ondrop="handleDowntimeFileDrop(event)" class="border-2 border-dashed border-slate-300 hover:border-violet-500 rounded-2xl p-6 text-center bg-slate-50 hover:bg-violet-50/40 transition-all cursor-pointer" onclick="document.getElementById('inputDowntimeExcelFile').click()">
+          <input type="file" id="inputDowntimeExcelFile" accept=".xlsx,.xls" class="hidden" onchange="handleDowntimeFileSelect(event)">
+          <div class="w-12 h-12 rounded-2xl bg-violet-100 text-violet-600 flex items-center justify-center mx-auto mb-3 text-xl">
+            <i class="fa-solid fa-cloud-arrow-up"></i>
+          </div>
+          <h4 class="text-sm font-bold text-slate-800 mb-1">Click to browse or drag & drop Daily Downtime Excel file</h4>
+          <p class="text-xs text-slate-500">Supports .xlsx and .xls (e.g. <span class="font-mono font-bold text-slate-700">Template Import 2.xlsx</span>, <span class="font-mono font-bold text-slate-700">Daily Downtime Entry sheet Import file.xlsx</span>)</p>
+        </div>
+
+        <!-- Telemetry & Summary Card (Hidden until file selected/parsed) -->
+        <div id="importPreviewSummary" class="hidden p-4 rounded-xl bg-slate-900 text-white space-y-3">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span id="importFileName" class="text-xs font-mono font-bold text-slate-200 truncate max-w-[280px]">file.xlsx</span>
+            </div>
+            <span id="importRecordCountBadge" class="px-2 py-0.5 rounded text-[10px] font-black bg-[#E60012] text-white font-mono">0 Incidents Found</span>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
+            <div class="p-2 bg-slate-800/80 rounded-lg border border-slate-700">
+              <span class="text-[10px] text-slate-400 block">Total Records</span>
+              <span id="importStatCount" class="text-sm font-black font-mono text-white">0</span>
+            </div>
+            <div class="p-2 bg-slate-800/80 rounded-lg border border-slate-700">
+              <span class="text-[10px] text-slate-400 block">Total Downtime</span>
+              <span id="importStatHours" class="text-sm font-black font-mono text-amber-400">0.0h</span>
+            </div>
+            <div class="p-2 bg-slate-800/80 rounded-lg border border-slate-700">
+              <span class="text-[10px] text-slate-400 block">Date Range</span>
+              <span id="importStatDateRange" class="text-[11px] font-bold font-mono text-slate-300">-</span>
+            </div>
+            <div class="p-2 bg-slate-800/80 rounded-lg border border-slate-700">
+              <span class="text-[10px] text-slate-400 block">Open Incidents</span>
+              <span id="importStatOpen" class="text-sm font-black font-mono text-rose-400">0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Import Mode Selection -->
+        <div id="importModeContainer" class="hidden p-3.5 rounded-xl border border-slate-200 bg-white space-y-2">
+          <label class="form-label-modern mb-1 block">Import Mode Option:</label>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            <label class="flex items-center gap-2 p-2.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 cursor-pointer">
+              <input type="radio" name="importModeRadio" value="replace" checked class="text-[#E60012] focus:ring-red-500">
+              <div>
+                <span class="font-bold text-slate-800 block">Replace Existing Logs</span>
+                <span class="text-[10px] text-slate-500">Overwrite current database with these imported records</span>
+              </div>
+            </label>
+            <label class="flex items-center gap-2 p-2.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 cursor-pointer">
+              <input type="radio" name="importModeRadio" value="append" class="text-[#E60012] focus:ring-red-500">
+              <div>
+                <span class="font-bold text-slate-800 block">Append to Existing Logs</span>
+                <span class="text-[10px] text-slate-500">Add imported incidents without erasing existing entries</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Preview Table (Scrollable) -->
+        <div id="importPreviewTableWrapper" class="hidden space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+              <i class="fa-solid fa-table-list text-slate-500"></i> Parsed Incident Records Preview (First 10)
+            </span>
+            <span id="importPreviewNote" class="text-[10px] text-slate-400 font-mono">Showing preview</span>
+          </div>
+          <div class="overflow-x-auto rounded-lg border border-slate-200 max-h-56 overflow-y-auto">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead class="sticky top-0 bg-slate-900 text-white uppercase text-[10px] tracking-wider z-10">
+                <tr>
+                  <th class="px-3 py-2">#</th>
+                  <th class="px-3 py-2">Date</th>
+                  <th class="px-3 py-2">Machine Code</th>
+                  <th class="px-3 py-2">Area / Plant</th>
+                  <th class="px-3 py-2">Process</th>
+                  <th class="px-3 py-2 text-right">DT Min</th>
+                  <th class="px-3 py-2 text-center">Affected</th>
+                  <th class="px-3 py-2 text-right">Total DT</th>
+                  <th class="px-3 py-2">Loss Category</th>
+                  <th class="px-3 py-2">Nature</th>
+                  <th class="px-3 py-2">Status</th>
+                </tr>
+              </thead>
+              <tbody id="importPreviewTableBody" class="divide-y divide-slate-100 bg-white">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2 flex-shrink-0">
+        <button type="button" onclick="closeImportDowntimeModal()" class="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer">
+          Cancel
+        </button>
+        <button type="button" id="btnConfirmDowntimeImport" onclick="confirmDowntimeImport()" disabled class="px-5 py-2 text-xs font-black rounded-xl bg-violet-600 hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed text-white flex items-center gap-1.5 shadow-sm transition-all active:scale-95 cursor-pointer">
+          <i class="fa-solid fa-check"></i>
+          <span>Confirm & Import Records</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+</body>
+</html>

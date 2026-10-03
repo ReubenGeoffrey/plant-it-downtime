@@ -1,0 +1,2395 @@
+{
+  "areas": [
+    "4 Roll Shed",
+    "FID",
+    "IT Infra",
+    "Mixing Shed",
+    "Plant 4",
+    "Plant-1",
+    "Plant-2",
+    "Plant-3",
+    "Plant-4"
+  ],
+  "processes": [
+    "3 Roll",
+    "4 Roll",
+    "Band Building",
+    "Bead Building",
+    "Biascutter",
+    "Carbon Loading",
+    "Chemical Loading",
+    "Extruder",
+    "FID",
+    "IT Infrastructure",
+    "Kneader",
+    "Mixing",
+    "Rim Fitting",
+    "Salvage",
+    "Solid Curing",
+    "Solid Tire Building",
+    "Steelastic",
+    "Tire Building",
+    "Tire Curing"
+  ],
+  "machines": [
+    {
+      "code": "BLD_A01",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-1",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_A05",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-1",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_A06",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-1",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_A07",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-1",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_A08",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-1",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_A10",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-1",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_A11",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-1",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_F05",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-1",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_F06",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-1",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_F08",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-1",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_F14",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-1",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_F17",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-1",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_F18",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-1",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_B01",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-2",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_B02",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-2",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_B03",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-2",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_B04",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-2",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_B05",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-2",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_B06",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-2",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_B09",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-2",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_B10",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-2",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_B11",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-2",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_B13",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-2",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_F01",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-2",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_F02",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-2",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_F03",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-2",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_F10",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-2",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_F11",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-2",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_F13",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-2",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_F16",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-2",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_B07",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-3",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_C07",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-3",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_C08",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-3",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_C09",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-3",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_C10",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-3",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_D06",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-3",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_D07",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-3",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_D08",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-3",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_E01",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-3",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_E02",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-3",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_E03",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-3",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_E04",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-3",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_F04",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-3",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_F09",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-3",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_F12",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-3",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_F15",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-3",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_G01",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-3",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_G02",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-3",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_G03",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-3",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_G04",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-3",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_G05",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-3",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_G06",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-3",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_G07",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-3",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_G08",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-3",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_G09",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-3",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_H01",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-3",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_H02",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-3",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BLD_H03",
+      "name": "Tire Building Stage-1",
+      "area": "Plant-3",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BST_001",
+      "name": "Tire Building Stage-2",
+      "area": "Plant-3",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BST_002",
+      "name": "Tire Building Stage-2",
+      "area": "Plant-2",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "BST_003",
+      "name": "Tire Building Stage-2",
+      "area": "Plant-1",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "FMC_004",
+      "name": "Tire Building Stage-2",
+      "area": "Plant-1",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "FMC_003",
+      "name": "Tire Building Stage-2",
+      "area": "Plant-1",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "FMC_001",
+      "name": "Tire Building Stage-2",
+      "area": "Plant-2",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "FMC_002",
+      "name": "Tire Building Stage-2",
+      "area": "Plant-2",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "MAR_001",
+      "name": "Tire Building Stage-2",
+      "area": "Plant-2",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "MAR_002",
+      "name": "Tire Building Stage-2",
+      "area": "Plant-2",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "MAR_004",
+      "name": "Tire Building Stage-2",
+      "area": "Plant-1",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "MAR_005",
+      "name": "Tire Building Stage-2",
+      "area": "Plant-1",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "YAN_001",
+      "name": "Tire Building Stage-2",
+      "area": "Plant-3",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "YAN_002",
+      "name": "Tire Building Stage-2",
+      "area": "Plant-3",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "YAN_003",
+      "name": "Tire Building Stage-2",
+      "area": "Plant-3",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "FUJ_004",
+      "name": "Tire Building Stage-2",
+      "area": "Plant-3",
+      "process": "Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "STL_001",
+      "name": "Steelastic",
+      "area": "Plant-1",
+      "process": "Steelastic",
+      "critical": "No"
+    },
+    {
+      "code": "CAL_01",
+      "name": "4 Roll Calander",
+      "area": "4 Roll Shed",
+      "process": "4 Roll",
+      "critical": "No"
+    },
+    {
+      "code": "SQC_01",
+      "name": "3 Roll Calander",
+      "area": "4 Roll Shed",
+      "process": "3 Roll",
+      "critical": "No"
+    },
+    {
+      "code": "SQC_02",
+      "name": "3 Roll Calander",
+      "area": "4 Roll Shed",
+      "process": "3 Roll",
+      "critical": "No"
+    },
+    {
+      "code": "BED_001",
+      "name": "Bead Winding",
+      "area": "4 Roll Shed",
+      "process": "Bead Building",
+      "critical": "No"
+    },
+    {
+      "code": "BED_002",
+      "name": "Bead Winding",
+      "area": "4 Roll Shed",
+      "process": "Bead Building",
+      "critical": "No"
+    },
+    {
+      "code": "FLP_001",
+      "name": "Fillering & Flipping",
+      "area": "4 Roll Shed",
+      "process": "Bead Building",
+      "critical": "No"
+    },
+    {
+      "code": "FLP_002",
+      "name": "Fillering & Flipping",
+      "area": "4 Roll Shed",
+      "process": "Bead Building",
+      "critical": "No"
+    },
+    {
+      "code": "FLP_003",
+      "name": "Fillering & Flipping",
+      "area": "4 Roll Shed",
+      "process": "Bead Building",
+      "critical": "No"
+    },
+    {
+      "code": "BAS_001",
+      "name": "Biascutter1",
+      "area": "Plant-1",
+      "process": "Biascutter",
+      "critical": "No"
+    },
+    {
+      "code": "BAS_002",
+      "name": "Biascutter2",
+      "area": "Plant-1",
+      "process": "Biascutter",
+      "critical": "No"
+    },
+    {
+      "code": "BAS_003",
+      "name": "Biascutter3",
+      "area": "Plant-1",
+      "process": "Biascutter",
+      "critical": "No"
+    },
+    {
+      "code": "BAS_004",
+      "name": "Biascutter4",
+      "area": "Plant-2",
+      "process": "Biascutter",
+      "critical": "No"
+    },
+    {
+      "code": "BAS_005",
+      "name": "Biascutter5",
+      "area": "Plant-3",
+      "process": "Biascutter",
+      "critical": "No"
+    },
+    {
+      "code": "BAS_007",
+      "name": "Steel Bias cutter",
+      "area": "4 Roll Shed",
+      "process": "Biascutter",
+      "critical": "No"
+    },
+    {
+      "code": "BAS_008",
+      "name": "Auto Bias cutter",
+      "area": "4 Roll Shed",
+      "process": "Biascutter",
+      "critical": "No"
+    },
+    {
+      "code": "BAS_009",
+      "name": "Auto Bias cutter",
+      "area": "4 Roll Shed",
+      "process": "Biascutter",
+      "critical": "No"
+    },
+    {
+      "code": "BND_001",
+      "name": "Band Building",
+      "area": "Plant-2",
+      "process": "Band Building",
+      "critical": "No"
+    },
+    {
+      "code": "BND_002",
+      "name": "Band Building",
+      "area": "Plant-2",
+      "process": "Band Building",
+      "critical": "No"
+    },
+    {
+      "code": "BND_003",
+      "name": "Band Building",
+      "area": "Plant-2",
+      "process": "Band Building",
+      "critical": "No"
+    },
+    {
+      "code": "BND_004",
+      "name": "Band Building",
+      "area": "Plant-2",
+      "process": "Band Building",
+      "critical": "No"
+    },
+    {
+      "code": "BND_005",
+      "name": "Band Building",
+      "area": "Plant-2",
+      "process": "Band Building",
+      "critical": "No"
+    },
+    {
+      "code": "BND_006",
+      "name": "Band Building",
+      "area": "Plant-3",
+      "process": "Band Building",
+      "critical": "No"
+    },
+    {
+      "code": "BND_007",
+      "name": "Band Building",
+      "area": "Plant-3",
+      "process": "Band Building",
+      "critical": "No"
+    },
+    {
+      "code": "BND_008",
+      "name": "Band Building",
+      "area": "Plant-3",
+      "process": "Band Building",
+      "critical": "No"
+    },
+    {
+      "code": "BND_009",
+      "name": "Band Building",
+      "area": "Plant-3",
+      "process": "Band Building",
+      "critical": "No"
+    },
+    {
+      "code": "BND_010",
+      "name": "Band Building",
+      "area": "Plant-3",
+      "process": "Band Building",
+      "critical": "No"
+    },
+    {
+      "code": "BND_020",
+      "name": "Band Building",
+      "area": "Plant-1",
+      "process": "Band Building",
+      "critical": "No"
+    },
+    {
+      "code": "BND_021",
+      "name": "Band Building",
+      "area": "Plant-1",
+      "process": "Band Building",
+      "critical": "No"
+    },
+    {
+      "code": "BND_022",
+      "name": "Band Building",
+      "area": "Plant-4",
+      "process": "Band Building",
+      "critical": "No"
+    },
+    {
+      "code": "BND_023",
+      "name": "Band Building",
+      "area": "Plant-4",
+      "process": "Band Building",
+      "critical": "No"
+    },
+    {
+      "code": "EXT_001",
+      "name": "Extruder",
+      "area": "Plant-2",
+      "process": "Extruder",
+      "critical": "No"
+    },
+    {
+      "code": "EXT_003",
+      "name": "Extruder",
+      "area": "Plant-3",
+      "process": "Extruder",
+      "critical": "No"
+    },
+    {
+      "code": "EXT_005",
+      "name": "Extruder",
+      "area": "Plant-2",
+      "process": "Extruder",
+      "critical": "No"
+    },
+    {
+      "code": "CU_A01",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_A02",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_A03",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_A04",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_A05",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_A06",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_A07",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_A08",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_A09",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_A10",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_A11",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_A12",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_A13",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_B01",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_B02",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_B03",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_B04",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_B05",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_B06",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_B07",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_B08",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_B09",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_B10",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_B11",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_B12",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_C01",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_C02",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_C03",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_C04",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_C05",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_C06",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_C07",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_C08",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_C09",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_C10",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_C11",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_D01",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_D02",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_D03",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_D04",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_D05",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_D06",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_D07",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_D08",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_D09",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_D10",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_D11",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_D12",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_D13",
+      "name": "Tire Curing Press",
+      "area": "Plant-1",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_E01",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_E02",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_E03",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_E04",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_E05",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_E06",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_E07",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_E08",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_E09",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_E10",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_E11",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_E12",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_E13",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_F01",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_F02",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_F03",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_F04",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_F05",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_F06",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_F07",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_F08",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_F09",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_F10",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_F11",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_F12",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_F13",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_G01",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_G02",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_G03",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_G04",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_G05",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_G07",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_G08",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_G09",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_G10",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_G11",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_G12",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_G13",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_G14",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_G15",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_G16",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_H01",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_H02",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_H03",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_H04",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_H05",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_H06",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_H07",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_H08",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_H09",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_H10",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_H11",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_H12",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_H13",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_H14",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_H15",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_H16",
+      "name": "Tire Curing Press",
+      "area": "Plant-2",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_I01",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_I02",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_I03",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_I04",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_I05",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_I06",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_I07",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_I08",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_I09",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_I10",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_I11",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_J04",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_J05",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_J06",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_J07",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_J08",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_J09",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_J10",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_J1A",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_J2A",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_J3A",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_K01",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_K02",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_K03",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_K04",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_K05",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_K06",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_K07",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_K08",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_K09",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_K10",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_K11",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_K12",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_K13",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_K14",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_K15",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_L01",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_L02",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_L03",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_L04",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_L05",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_L06",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_L07",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_L08",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_L09",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_L10",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_L11",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_L12",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_L13",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_L14",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_L15",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_M01",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_M02",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_M03",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_M04",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_M05",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_M06",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_M07",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_M08",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_M09",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_M10",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_N01",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "CU_N02",
+      "name": "Tire Curing Press",
+      "area": "Plant-3",
+      "process": "Tire Curing",
+      "critical": "No"
+    },
+    {
+      "code": "MIX_001",
+      "name": "Mixer",
+      "area": "Mixing Shed",
+      "process": "Mixing",
+      "critical": "No"
+    },
+    {
+      "code": "MIX_002",
+      "name": "Mixer",
+      "area": "Mixing Shed",
+      "process": "Mixing",
+      "critical": "No"
+    },
+    {
+      "code": "MIX_003",
+      "name": "Mixer",
+      "area": "Mixing Shed",
+      "process": "Mixing",
+      "critical": "No"
+    },
+    {
+      "code": "MIX_004",
+      "name": "Mixer",
+      "area": "Mixing Shed",
+      "process": "Mixing",
+      "critical": "No"
+    },
+    {
+      "code": "MIX_005",
+      "name": "Mixer",
+      "area": "Mixing Shed",
+      "process": "Mixing",
+      "critical": "No"
+    },
+    {
+      "code": "MIX_006",
+      "name": "Mixer",
+      "area": "Mixing Shed",
+      "process": "Mixing",
+      "critical": "No"
+    },
+    {
+      "code": "SAL_001",
+      "name": "Salvage",
+      "area": "Plant-3",
+      "process": "Salvage",
+      "critical": "No"
+    },
+    {
+      "code": "CL",
+      "name": "Carbon Loading",
+      "area": "Mixing Shed",
+      "process": "Carbon Loading",
+      "critical": "No"
+    },
+    {
+      "code": "MCL",
+      "name": "Master Chemical Loading",
+      "area": "Mixing Shed",
+      "process": "Chemical Loading",
+      "critical": "No"
+    },
+    {
+      "code": "FCL",
+      "name": "Final Chemical Loading",
+      "area": "Mixing Shed",
+      "process": "Chemical Loading",
+      "critical": "No"
+    },
+    {
+      "code": "KNDR_001",
+      "name": "Kneader",
+      "area": "Plant 4",
+      "process": "Kneader",
+      "critical": "No"
+    },
+    {
+      "code": "STP_TBM_1",
+      "name": "Solid Tire Building stage 1",
+      "area": "Plant 4",
+      "process": "Solid Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "STP_TBM_2",
+      "name": "Solid Tire Building stage 2",
+      "area": "Plant 4",
+      "process": "Solid Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "STP_TBM_3",
+      "name": "Solid Tire Building stage 3",
+      "area": "Plant 4",
+      "process": "Solid Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "STP_TBM_4",
+      "name": "Solid Tire Building stage 4",
+      "area": "Plant 4",
+      "process": "Solid Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "STB_002",
+      "name": "Solid Tire Building Old",
+      "area": "Plant 4",
+      "process": "Solid Tire Building",
+      "critical": "No"
+    },
+    {
+      "code": "S_SC01",
+      "name": "Solid Tire Curing Press",
+      "area": "Plant 4",
+      "process": "Solid Curing",
+      "critical": "No"
+    },
+    {
+      "code": "S_SC02",
+      "name": "Solid Tire Curing Press",
+      "area": "Plant 4",
+      "process": "Solid Curing",
+      "critical": "No"
+    },
+    {
+      "code": "S_SC03",
+      "name": "Solid Tire Curing Press",
+      "area": "Plant 4",
+      "process": "Solid Curing",
+      "critical": "No"
+    },
+    {
+      "code": "S_SC04",
+      "name": "Solid Tire Curing Press",
+      "area": "Plant 4",
+      "process": "Solid Curing",
+      "critical": "No"
+    },
+    {
+      "code": "S_SC05",
+      "name": "Solid Tire Curing Press",
+      "area": "Plant 4",
+      "process": "Solid Curing",
+      "critical": "No"
+    },
+    {
+      "code": "S_SC06",
+      "name": "Solid Tire Curing Press",
+      "area": "Plant 4",
+      "process": "Solid Curing",
+      "critical": "No"
+    },
+    {
+      "code": "S_SC07",
+      "name": "Solid Tire Curing Press",
+      "area": "Plant 4",
+      "process": "Solid Curing",
+      "critical": "No"
+    },
+    {
+      "code": "S_SC08",
+      "name": "Solid Tire Curing Press",
+      "area": "Plant 4",
+      "process": "Solid Curing",
+      "critical": "No"
+    },
+    {
+      "code": "S_SC09",
+      "name": "Solid Tire Curing Press",
+      "area": "Plant 4",
+      "process": "Solid Curing",
+      "critical": "No"
+    },
+    {
+      "code": "S_SC10",
+      "name": "Solid Tire Curing Press",
+      "area": "Plant 4",
+      "process": "Solid Curing",
+      "critical": "No"
+    },
+    {
+      "code": "S_SC11",
+      "name": "Solid Tire Curing Press",
+      "area": "Plant 4",
+      "process": "Solid Curing",
+      "critical": "No"
+    },
+    {
+      "code": "S_SC12",
+      "name": "Solid Tire Curing Press",
+      "area": "Plant 4",
+      "process": "Solid Curing",
+      "critical": "No"
+    },
+    {
+      "code": "S_SC13",
+      "name": "Solid Tire Curing Press",
+      "area": "Plant 4",
+      "process": "Solid Curing",
+      "critical": "No"
+    },
+    {
+      "code": "S_SC14",
+      "name": "Solid Tire Curing Press",
+      "area": "Plant 4",
+      "process": "Solid Curing",
+      "critical": "No"
+    },
+    {
+      "code": "S_SC15",
+      "name": "Solid Tire Curing Press",
+      "area": "Plant 4",
+      "process": "Solid Curing",
+      "critical": "No"
+    },
+    {
+      "code": "S_SC16",
+      "name": "Solid Tire Curing Press",
+      "area": "Plant 4",
+      "process": "Solid Curing",
+      "critical": "No"
+    },
+    {
+      "code": "S_SC17",
+      "name": "Solid Tire Curing Press",
+      "area": "Plant 4",
+      "process": "Solid Curing",
+      "critical": "No"
+    },
+    {
+      "code": "S_SC18",
+      "name": "Solid Tire Curing Press",
+      "area": "Plant 4",
+      "process": "Solid Curing",
+      "critical": "No"
+    },
+    {
+      "code": "S_SC19",
+      "name": "Solid Tire Curing Press",
+      "area": "Plant 4",
+      "process": "Solid Curing",
+      "critical": "No"
+    },
+    {
+      "code": "S_SC20",
+      "name": "Solid Tire Curing Press",
+      "area": "Plant 4",
+      "process": "Solid Curing",
+      "critical": "No"
+    },
+    {
+      "code": "S_SC21",
+      "name": "Solid Tire Curing Press",
+      "area": "Plant 4",
+      "process": "Solid Curing",
+      "critical": "No"
+    },
+    {
+      "code": "S_SC22",
+      "name": "Solid Tire Curing Press",
+      "area": "Plant 4",
+      "process": "Solid Curing",
+      "critical": "No"
+    },
+    {
+      "code": "SC_S01",
+      "name": "Solid Tire Curing Press",
+      "area": "Plant 4",
+      "process": "Solid Curing",
+      "critical": "No"
+    },
+    {
+      "code": "SC_S02",
+      "name": "Solid Tire Curing Press",
+      "area": "Plant 4",
+      "process": "Solid Curing",
+      "critical": "No"
+    },
+    {
+      "code": "SC_S03",
+      "name": "Solid Tire Curing Press",
+      "area": "Plant 4",
+      "process": "Solid Curing",
+      "critical": "No"
+    },
+    {
+      "code": "SC_S04",
+      "name": "Solid Tire Curing Press",
+      "area": "Plant 4",
+      "process": "Solid Curing",
+      "critical": "No"
+    },
+    {
+      "code": "SC_S05",
+      "name": "Solid Tire Curing Press",
+      "area": "Plant 4",
+      "process": "Solid Curing",
+      "critical": "No"
+    },
+    {
+      "code": "SC_S06",
+      "name": "Solid Tire Curing Press",
+      "area": "Plant 4",
+      "process": "Solid Curing",
+      "critical": "No"
+    },
+    {
+      "code": "SC_S07",
+      "name": "Solid Tire Curing Press",
+      "area": "Plant 4",
+      "process": "Solid Curing",
+      "critical": "No"
+    },
+    {
+      "code": "SC_S08",
+      "name": "Solid Tire Curing Press",
+      "area": "Plant 4",
+      "process": "Solid Curing",
+      "critical": "No"
+    },
+    {
+      "code": "SC_S09",
+      "name": "Solid Tire Curing Press",
+      "area": "Plant 4",
+      "process": "Solid Curing",
+      "critical": "No"
+    },
+    {
+      "code": "SC_S10",
+      "name": "Solid Tire Curing Press",
+      "area": "Plant 4",
+      "process": "Solid Curing",
+      "critical": "No"
+    },
+    {
+      "code": "SC_S11",
+      "name": "Solid Tire Curing Press",
+      "area": "Plant 4",
+      "process": "Solid Curing",
+      "critical": "No"
+    },
+    {
+      "code": "SC_S12",
+      "name": "Solid Tire Curing Press",
+      "area": "Plant 4",
+      "process": "Solid Curing",
+      "critical": "No"
+    },
+    {
+      "code": "SC_S13",
+      "name": "Solid Tire Curing Press",
+      "area": "Plant 4",
+      "process": "Solid Curing",
+      "critical": "No"
+    },
+    {
+      "code": "SC_S14",
+      "name": "Solid Tire Curing Press",
+      "area": "Plant 4",
+      "process": "Solid Curing",
+      "critical": "No"
+    },
+    {
+      "code": "FID_01",
+      "name": "Rim Fitting Machine",
+      "area": "Plant 4",
+      "process": "Rim Fitting",
+      "critical": "No"
+    },
+    {
+      "code": "FID_02",
+      "name": "Rim Fitting Machine",
+      "area": "Plant 4",
+      "process": "Rim Fitting",
+      "critical": "No"
+    },
+    {
+      "code": "FID_03",
+      "name": "Rim Fitting Machine",
+      "area": "Plant 4",
+      "process": "Rim Fitting",
+      "critical": "No"
+    },
+    {
+      "code": "FID",
+      "name": "FID",
+      "area": "FID",
+      "process": "FID",
+      "critical": "No"
+    },
+    {
+      "code": "MES_SERVER",
+      "name": "MES / Application Server",
+      "area": "IT Infra",
+      "process": "IT Infrastructure",
+      "critical": "Yes"
+    },
+    {
+      "code": "BAS_006",
+      "name": "Steel Bias cutter",
+      "area": "4 Roll Shed",
+      "process": "Biascutter",
+      "critical": "No"
+    },
+    {
+      "code": "KNDR_002",
+      "name": "Kneader",
+      "area": "Plant 4",
+      "process": "Kneader",
+      "critical": "No"
+    },
+    {
+      "code": "SC_S15",
+      "name": "Solid Tire Curing Press",
+      "area": "Plant 4",
+      "process": "Solid Curing",
+      "critical": "No"
+    },
+    {
+      "code": "SC_S16",
+      "name": "Solid Tire Curing Press",
+      "area": "Plant 4",
+      "process": "Solid Curing",
+      "critical": "No"
+    }
+  ]
+}

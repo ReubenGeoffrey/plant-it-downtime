@@ -1,0 +1,19 @@
+{
+  "name": "yokohama-mes-tracker",
+  "version": "1.0.0",
+  "description": "Yokohama MES Downtime & Availability Tracker Desktop Application",
+  "scripts": {
+    "start": "python -m http.server 8080",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.117.2",
+    "@tauri-apps/api": "^2",
+    "exceljs": "^4.4.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
+}

@@ -1,0 +1,10 @@
+node_modules/
+.system_generated/
+scratch/
+src-tauri/target/
+*.log
+*.tmp
+tmp_test.js
+test_*.py
+test_*.js
+test_*.xlsx
