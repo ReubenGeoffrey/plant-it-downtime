@@ -2189,6 +2189,100 @@ function saveToStorage() {
   }
 }
 
+// --- Manual Top-Right Cloud Sync Trigger ---
+window.triggerManualCloudSync = async function() {
+  const btn = document.getElementById("btnCloudSync");
+  const icon = document.getElementById("cloudSyncIcon");
+  const text = document.getElementById("cloudSyncText");
+  const pulse = document.getElementById("cloudSyncPulse");
+
+  if (btn) btn.disabled = true;
+  if (icon) icon.className = "fa-solid fa-rotate fa-spin text-cyan-400 text-xs";
+  if (text) text.textContent = "Syncing...";
+  if (pulse) pulse.className = "w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping";
+
+  try {
+    let syncedCount = 0;
+
+    // 1. Fetch live user accounts from Supabase
+    if (typeof window.fetchCloudUserAccounts === "function") {
+      try {
+        const cloudAccounts = await window.fetchCloudUserAccounts();
+        if (Array.isArray(cloudAccounts) && cloudAccounts.length > 0) {
+          cloudAccounts.forEach(ca => {
+            const roleKey = (ca.role || "").toLowerCase();
+            if (USER_ACCOUNTS[roleKey]) {
+              USER_ACCOUNTS[roleKey].username = ca.username;
+              USER_ACCOUNTS[roleKey].displayName = ca.display_name;
+              USER_ACCOUNTS[roleKey].passwordHash = ca.password_hash;
+            }
+          });
+          saveUserAccountsToStorage();
+        }
+      } catch (e) {
+        console.warn("[Cloud Sync] Accounts fetch warning:", e);
+      }
+    }
+
+    // 2. Fetch live incidents from Supabase
+    if (typeof window.fetchCloudIncidents === "function") {
+      const cloudData = await window.fetchCloudIncidents();
+      if (Array.isArray(cloudData)) {
+        if (cloudData.length > 0) {
+          downtimeRecords = cloudData;
+          window.downtimeRecords = downtimeRecords;
+          localStorage.setItem("YOKOHAMA_DOWNTIME_RECORDS", JSON.stringify(downtimeRecords));
+          syncedCount = cloudData.length;
+        } else if (downtimeRecords.length > 0 && typeof window.bulkUpsertCloudIncidents === "function") {
+          // Cloud database empty, push local records to Supabase
+          await window.bulkUpsertCloudIncidents(downtimeRecords);
+          syncedCount = downtimeRecords.length;
+        }
+      }
+    }
+
+    // 3. Re-render UI components
+    if (typeof renderKPIs === "function") renderKPIs();
+    if (typeof renderCharts === "function") renderCharts();
+    if (typeof renderRecordsTable === "function") renderRecordsTable();
+    if (typeof populateDashboardMonths === "function") populateDashboardMonths();
+    if (typeof updateMaintenanceLogCount === "function") updateMaintenanceLogCount();
+    if (typeof initMachineMultiSelectDropdown === "function") initMachineMultiSelectDropdown();
+    if (typeof initAreaMultiSelectDropdown === "function") initAreaMultiSelectDropdown();
+
+    // 4. Success State Feedback
+    if (icon) icon.className = "fa-solid fa-circle-check text-emerald-400 text-xs";
+    if (text) text.textContent = "Synced!";
+    if (pulse) pulse.className = "w-1.5 h-1.5 rounded-full bg-emerald-400";
+
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    if (btn) btn.title = `Last synced: ${timeStr} (${syncedCount} incidents)`;
+
+    showToast(`Cloud Sync Successful! Updated ${syncedCount} incidents with Supabase.`, "success");
+
+    setTimeout(() => {
+      if (icon) icon.className = "fa-solid fa-cloud-arrow-up text-emerald-400 text-xs";
+      if (text) text.textContent = "Cloud Sync";
+      if (pulse) pulse.className = "w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse";
+      if (btn) btn.disabled = false;
+    }, 2500);
+
+  } catch (err) {
+    console.error("[Cloud Sync] Sync failed:", err);
+    if (icon) icon.className = "fa-solid fa-triangle-exclamation text-amber-400 text-xs";
+    if (text) text.textContent = "Sync Failed";
+    if (pulse) pulse.className = "w-1.5 h-1.5 rounded-full bg-amber-400";
+    showToast("Cloud sync failed. Please check network connection or Supabase status.", "error");
+
+    setTimeout(() => {
+      if (icon) icon.className = "fa-solid fa-cloud-arrow-up text-emerald-400 text-xs";
+      if (text) text.textContent = "Cloud Sync";
+      if (pulse) pulse.className = "w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse";
+      if (btn) btn.disabled = false;
+    }, 3000);
+  }
+};
+
 function saveTechsToStorage() {
   localStorage.setItem("YOKOHAMA_TECHNICIANS", JSON.stringify(technicians));
   window.technicians = technicians;

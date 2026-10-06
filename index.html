@@ -94,6 +94,13 @@
             <span class="text-slate-400">Loading time...</span>
           </div>
 
+          <!-- Live Cloud Sync Button (Supabase Cloud Sync) -->
+          <button type="button" id="btnCloudSync" onclick="triggerManualCloudSync()" class="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-900 hover:bg-slate-800 text-emerald-400 border border-emerald-500/30 transition-all flex items-center gap-1.5 shadow-xs active:scale-95 cursor-pointer" title="Sync downtime records &amp; accounts with Supabase Cloud Database">
+            <i id="cloudSyncIcon" class="fa-solid fa-cloud-arrow-up text-emerald-400 text-xs"></i>
+            <span id="cloudSyncText" class="font-mono text-[11px] hidden sm:inline">Cloud Sync</span>
+            <span id="cloudSyncPulse" class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          </button>
+
           <!-- Dynamic Auth Button / Logged in User Badge -->
           <div id="headerAuthAction"></div>
         </div>
@@ -1949,7 +1956,7 @@
   </footer>
 
   <!-- Application Logic -->
-  <script src="app.js?v=3.9"></script>
+  <script src="app.js?v=4.0"></script>
 
   <!-- =========================================================================
        MODAL: EXPORT REPORT BY DATE OR MONTH (EXECUTIVE EXCEL & CSV)
