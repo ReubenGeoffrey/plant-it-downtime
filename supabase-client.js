@@ -367,7 +367,38 @@ async function clearAllCloudIncidents() {
 window.clearAllCloudIncidents = clearAllCloudIncidents;
 
 // ----------------------------------------------------------------------------
-// 7. Update User Account (Sync password or username changes to Cloud)
+// 7. Fetch all User Accounts from Cloud
+// ----------------------------------------------------------------------------
+async function fetchCloudUserAccounts() {
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data, error } = await client.from('user_accounts').select('*');
+      if (!error && Array.isArray(data) && data.length > 0) return data;
+    } catch (e) {}
+  }
+
+  try {
+    const res = await fetch(`${REST_BASE}/user_accounts?select=*`, {
+      method: 'GET',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+      }
+    });
+    if (res.ok) {
+      const list = await res.json();
+      if (Array.isArray(list)) return list;
+    }
+  } catch (err) {
+    console.warn('[Supabase] Failed to fetch user accounts:', err);
+  }
+  return null;
+}
+window.fetchCloudUserAccounts = fetchCloudUserAccounts;
+
+// ----------------------------------------------------------------------------
+// 8. Update User Account (Sync password or username changes to Cloud)
 // ----------------------------------------------------------------------------
 async function updateCloudUserAccount(role, username, displayName, passwordHash) {
   const patch = {
@@ -382,23 +413,51 @@ async function updateCloudUserAccount(role, username, displayName, passwordHash)
   const client = getSupabaseClient();
   if (client) {
     try {
-      const { error } = await client.from('user_accounts').update(patch).eq('role', role);
-      if (!error) return true;
-    } catch (e) {}
+      const { data, error } = await client
+        .from('user_accounts')
+        .update(patch)
+        .eq('role', role)
+        .select();
+
+      if (!error && Array.isArray(data) && data.length > 0) {
+        console.log('[Supabase] Successfully updated account in cloud:', data[0]);
+        return { success: true, updated: data[0] };
+      }
+      if (error) {
+        console.warn('[Supabase] SDK update warning:', error);
+      }
+    } catch (e) {
+      console.warn('[Supabase] SDK update exception:', e);
+    }
   }
 
+  // Fallback: Direct PostgREST API with Prefer: return=representation
   try {
     const res = await fetch(`${REST_BASE}/user_accounts?role=eq.${encodeURIComponent(role)}`, {
       method: 'PATCH',
       headers: {
         ...DEFAULT_HEADERS,
-        'Prefer': 'return=minimal'
+        'Prefer': 'return=representation'
       },
       body: JSON.stringify(patch)
     });
-    return res.ok;
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        console.log('[Supabase] Direct REST updated user account in cloud:', data[0]);
+        return { success: true, updated: data[0] };
+      } else {
+        console.warn('[Supabase] Cloud database affected 0 rows. Row Level Security (RLS) is active on user_accounts table.');
+        return { success: false, reason: 'RLS_BLOCKED' };
+      }
+    } else {
+      const errText = await res.text();
+      console.error('[Supabase] Direct REST update returned error:', res.status, errText);
+      return { success: false, error: errText };
+    }
   } catch (e) {
-    return false;
+    console.error('[Supabase] Network error updating user:', e);
+    return { success: false, error: e.message };
   }
 }
 window.updateCloudUserAccount = updateCloudUserAccount;

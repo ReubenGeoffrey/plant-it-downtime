@@ -39,7 +39,7 @@
       document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"><\\/script>');
     }
   </script>
-  <script src="supabase-client.js?v=2.1"></script>
+  <script src="supabase-client.js?v=2.2"></script>
   
   <!-- Custom Yokohama Theme Stylesheet -->
   <link rel="stylesheet" href="styles.css?v=2.2">
@@ -74,12 +74,13 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex items-center justify-between h-16">
         
-        <!-- Brand Title & New Logo -->
+        <!-- Brand Title & Icon -->
         <div class="flex items-center gap-3">
-          <img src="logo.png" alt="Yokohama MES Logo" class="h-10 w-auto object-contain rounded-lg bg-white/5 p-1 border border-white/10 shadow-xs">
+          <div class="h-10 w-10 rounded-lg bg-red-600/20 border border-red-500/30 flex items-center justify-center text-[#E60012] shadow-xs">
+            <i class="fa-solid fa-industry text-lg"></i>
+          </div>
           <div>
             <h1 class="text-xs sm:text-sm font-bold text-slate-200 tracking-wide uppercase">PLANT IT DOWNTIME MANAGEMENT PORTAL</h1>
-            <p class="text-[10px] text-slate-400 font-semibold tracking-wider">YOKOHAMA INDIA • MES SYSTEM</p>
           </div>
         </div>
 
@@ -106,7 +107,9 @@
   <section id="adminGatekeeperSection" class="min-h-[calc(100vh-8rem)] flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8 relative border-t-4 border-[#E60012] animate-scale-up">
       <div class="text-center mb-6">
-        <img src="logo.png" alt="Yokohama MES Logo" class="h-16 w-auto mx-auto mb-3 object-contain drop-shadow">
+        <div class="w-16 h-16 rounded-2xl bg-red-50 border border-red-100 flex items-center justify-center text-[#E60012] mx-auto mb-3 shadow-xs">
+          <i class="fa-solid fa-industry text-2xl"></i>
+        </div>
         <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight uppercase">Plant Portal Sign In</h2>
         <p class="text-xs text-slate-400 font-medium mt-1">Enter your authorized username &amp; password</p>
       </div>
@@ -1851,7 +1854,7 @@
                 </div>
                 <div>
                   <h5 class="text-sm font-black uppercase text-slate-900 tracking-wider">Restore Demo Incidents</h5>
-                  <span class="text-xs text-slate-500">Restore the 673 historical Yokohama incident dataset</span>
+                  <span class="text-xs text-slate-500">Restore the 673 historical plant incident dataset</span>
                 </div>
               </div>
               <p class="text-xs text-slate-600 leading-relaxed mb-4">
@@ -1946,7 +1949,7 @@
   </footer>
 
   <!-- Application Logic -->
-  <script src="app.js?v=3.8"></script>
+  <script src="app.js?v=3.9"></script>
 
   <!-- =========================================================================
        MODAL: EXPORT REPORT BY DATE OR MONTH (EXECUTIVE EXCEL & CSV)

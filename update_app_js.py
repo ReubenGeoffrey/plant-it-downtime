@@ -1853,8 +1853,19 @@ window.handleUpdateUserAccount = async function(e, roleKey) {
 
   saveUserAccountsToStorage();
 
+  let cloudSuccess = false;
+  let cloudReason = null;
   if (typeof window.updateCloudUserAccount === "function") {
-    window.updateCloudUserAccount(acc.role, acc.username, acc.displayName, acc.passwordHash).catch(e => console.warn("[Supabase] Cloud user sync warning:", e));
+    try {
+      const cloudRes = await window.updateCloudUserAccount(acc.role, acc.username, acc.displayName, acc.passwordHash);
+      if (cloudRes && cloudRes.success) {
+        cloudSuccess = true;
+      } else if (cloudRes && cloudRes.reason === 'RLS_BLOCKED') {
+        cloudReason = 'RLS_BLOCKED';
+      }
+    } catch (e) {
+      console.warn("[Supabase] Cloud user sync warning:", e);
+    }
   }
 
   // If the updated user is currently logged in, sync session
@@ -1875,7 +1886,13 @@ window.handleUpdateUserAccount = async function(e, roleKey) {
   }
 
   const passMsg = passwordChanged ? " and password updated" : "";
-  showToast(`${acc.role} account credentials saved! Username: "${newUsername}"${passMsg}.`, "success");
+  if (cloudSuccess) {
+    showToast(`${acc.role} credentials successfully updated in Supabase cloud!`, "success");
+  } else if (cloudReason === 'RLS_BLOCKED') {
+    showToast(`${acc.role} saved locally, but Supabase Cloud blocked the update (Row-Level Security). Run the SQL fix in Supabase to sync across devices.`, "warning", 8000);
+  } else {
+    showToast(`${acc.role} account credentials saved! Username: "${newUsername}"${passMsg}.`, "success");
+  }
 };
 
 // --- Reset Master Settings to Factory Defaults ---
@@ -2106,6 +2123,26 @@ async function initStorage() {
   technicians = technicians.map(t => t === "YOHT IT Team" ? "ATC IT Team" : t);
   saveTechsToStorage();
   window.downtimeRecords = downtimeRecords;
+
+  // --- Live Supabase User Accounts Sync ---
+  if (typeof window.fetchCloudUserAccounts === "function") {
+    try {
+      const cloudAccounts = await window.fetchCloudUserAccounts();
+      if (Array.isArray(cloudAccounts) && cloudAccounts.length > 0) {
+        cloudAccounts.forEach(ca => {
+          const roleKey = (ca.role || "").toLowerCase();
+          if (USER_ACCOUNTS[roleKey]) {
+            USER_ACCOUNTS[roleKey].username = ca.username;
+            USER_ACCOUNTS[roleKey].displayName = ca.display_name;
+            USER_ACCOUNTS[roleKey].passwordHash = ca.password_hash;
+          }
+        });
+        saveUserAccountsToStorage();
+      }
+    } catch (err) {
+      console.warn("[Supabase] Cloud users fetch warning:", err);
+    }
+  }
 
   // --- Live Supabase Cloud Database Sync ---
   if (typeof window.fetchCloudIncidents === "function") {
