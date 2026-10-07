@@ -4,7 +4,6 @@
   "description": "Yokohama MES Downtime & Availability Tracker Desktop Application",
   "scripts": {
     "start": "python -m http.server 8080",
-    "build": "node -c app.js",
     "bundle": "python update_app_js.py",
     "test": "node tests/run_tests.js",
     "test:acceptance": "node tests/run_acceptance_tests.js",
