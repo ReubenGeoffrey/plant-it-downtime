@@ -3,9 +3,6 @@ import json
 with open("d:/APP  YOkoHoma/machines_data.json", "r", encoding="utf-8") as f:
     data = json.load(f)
 
-with open("d:/APP  YOkoHoma/incidents_dataset.json", "r", encoding="utf-8") as f:
-    incidents_data = json.load(f)
-
 with open("d:/APP  YOkoHoma/downtime_import_38.json", "r", encoding="utf-8") as f:
     sample_import_data = json.load(f)
 
@@ -15,12 +12,9 @@ with open("d:/APP  YOkoHoma/template_import_2.json", "r", encoding="utf-8") as f
 machines_json = json.dumps(data["machines"], indent=2)
 areas_json = json.dumps(data["areas"], indent=2)
 processes_json = json.dumps(data["processes"], indent=2)
-incidents_json = json.dumps(incidents_data, indent=2)
+incidents_json = "[]"
 sample_import_json = json.dumps(sample_import_data, indent=2)
 template_2_json = json.dumps(template_2_data, indent=2)
-areas_json = json.dumps(data["areas"], indent=2)
-processes_json = json.dumps(data["processes"], indent=2)
-incidents_json = json.dumps(incidents_data, indent=2)
 
 js_template = """/**
  * ==========================================================================
@@ -69,9 +63,9 @@ const DEFAULT_TECHNICIANS = [
   "ATC IT Team"
 ];
 
-// --- Yokohama Plant IT Downtime Incident Dataset (Preserved backup for 1-click restore) ---
-const DEMO_INCIDENTS_BACKUP = __INCIDENTS__;
-window.DEMO_INCIDENTS_BACKUP = DEMO_INCIDENTS_BACKUP;
+// --- Empty demo backup (Demo incidents removed per user request) ---
+const DEMO_INCIDENTS_BACKUP = [];
+window.DEMO_INCIDENTS_BACKUP = [];
 const PRELOADED_SAMPLE_IMPORT = __SAMPLE_IMPORT__;
 window.PRELOADED_SAMPLE_IMPORT = PRELOADED_SAMPLE_IMPORT;
 const PRELOADED_TEMPLATE_2 = __TEMPLATE_2_IMPORT__;
@@ -4483,25 +4477,6 @@ window.clearAllIncidentLogs = function() {
   }
 };
 
-window.restoreDemoIncidents = function() {
-  const demoCount = DEMO_INCIDENTS_BACKUP.length;
-  const confirmed = (typeof confirm === "function")
-    ? confirm(`Restore the sample Yokohama incident dataset (${demoCount} historical records)?`)
-    : true;
-  if (confirmed) {
-    downtimeRecords = JSON.parse(JSON.stringify(DEMO_INCIDENTS_BACKUP));
-    window.downtimeRecords = downtimeRecords;
-    saveToStorage();
-    renderRecordsTable();
-    renderKPIs();
-    renderCharts();
-    populateDashboardMonths();
-    initCategoryFilterDropdown();
-    updateMaintenanceLogCount();
-    showToast(`${demoCount} demo incident logs restored successfully!`, "success");
-  }
-};
-
 // --- Dashboard Month Filter Helper Functions ---
 function getMonthName(mIdx) {
   const monthNames = [
@@ -8539,4 +8514,4 @@ js_final = js_template.replace("__AREAS__", areas_json).replace("__PROCESSES__",
 with open("d:/APP  YOkoHoma/app.js", "w", encoding="utf-8") as f:
     f.write(js_final)
 
-print("app.js updated with 673 historical plant downtime incidents successfully!")
+print("app.js updated successfully without demo records!")

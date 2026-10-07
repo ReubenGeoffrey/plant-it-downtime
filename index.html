@@ -1822,7 +1822,7 @@
 
       <!-- SUB-PANEL 8: DATABASE & INCIDENT LOGS MAINTENANCE -->
       <div id="settingsPanel-maintenance" class="hidden space-y-6">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           
           <!-- Card 1: Clear / Empty Incident Logs -->
           <div class="card-modern p-6 bg-white shadow-sm border border-slate-200 rounded-xl flex flex-col justify-between space-y-4">
@@ -1848,34 +1848,6 @@
               <button type="button" onclick="clearAllIncidentLogs()" class="w-full px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all active:scale-98 cursor-pointer">
                 <i class="fa-solid fa-broom"></i>
                 <span>Empty All Incident Logs Now</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Card 2: Restore Demo Incidents -->
-          <div class="card-modern p-6 bg-white shadow-sm border border-slate-200 rounded-xl flex flex-col justify-between space-y-4">
-            <div>
-              <div class="flex items-center gap-3 pb-3 mb-4 border-b border-slate-100">
-                <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center font-bold text-base">
-                  <i class="fa-solid fa-rotate-left"></i>
-                </div>
-                <div>
-                  <h5 class="text-sm font-black uppercase text-slate-900 tracking-wider">Restore Demo Incidents</h5>
-                  <span class="text-xs text-slate-500">Restore the 673 historical plant incident dataset</span>
-                </div>
-              </div>
-              <p class="text-xs text-slate-600 leading-relaxed mb-4">
-                Need to restore sample demo data for training or demonstrations? This safely restores the original 673 plant downtime incident tickets across all machines.
-              </p>
-              <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between text-xs font-mono">
-                <span class="text-slate-600">Demo Records Available:</span>
-                <span class="font-bold text-blue-600">673 Records</span>
-              </div>
-            </div>
-            <div class="pt-2">
-              <button type="button" onclick="restoreDemoIncidents()" class="w-full px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all active:scale-98 cursor-pointer">
-                <i class="fa-solid fa-database"></i>
-                <span>Restore 673 Demo Incidents</span>
               </button>
             </div>
           </div>
@@ -1956,7 +1928,7 @@
   </footer>
 
   <!-- Application Logic -->
-  <script src="app.js?v=4.0"></script>
+  <script src="app.js?v=4.1"></script>
 
   <!-- =========================================================================
        MODAL: EXPORT REPORT BY DATE OR MONTH (EXECUTIVE EXCEL & CSV)
