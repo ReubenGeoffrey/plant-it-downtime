@@ -1917,6 +1917,11 @@ window.handleUpdateUserAccount = async function(e, roleKey) {
 
 // --- Reset Master Settings to Factory Defaults ---
 window.resetMasterSettingsToDefaults = function() {
+  const user = (typeof getCurrentUser === "function") ? getCurrentUser() : null;
+  if (!user || user.role !== "ADMIN") {
+    showToast("Access Denied: Only Administrators can reset Master Settings to defaults.", "error");
+    return;
+  }
   if (!confirm("Reset all Master Settings (Machines, Categories, Areas, Responsibilities) to factory defaults? Custom additions will be restored.")) {
     return;
   }
@@ -2011,57 +2016,105 @@ function saveMasterDataToStorage() {
 }
 
 async function initStorage() {
-  // Load Dynamic Master Registry with Versioning
+  // Load Dynamic Master Registry with Versioning & Safe Fallbacks (Step 9 Fix)
   const masterVer = localStorage.getItem("YOKOHAMA_MASTER_VERSION");
   const storedMachines = localStorage.getItem("YOKOHAMA_MASTER_MACHINES");
+  let machinesLoaded = false;
   if (masterVer === "2026_master_v2" && storedMachines) {
     try {
-      YOKOHAMA_MACHINES = JSON.parse(storedMachines);
+      const parsed = JSON.parse(storedMachines);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        YOKOHAMA_MACHINES = parsed;
+        machinesLoaded = true;
+      }
     } catch (e) {
       console.error("Failed to parse master machines", e);
-      YOKOHAMA_MACHINES = [...INITIAL_MACHINES_BACKUP];
     }
-    const storedAreas = localStorage.getItem("YOKOHAMA_MASTER_AREAS");
-    if (storedAreas) {
-      try { YOKOHAMA_AREAS = JSON.parse(storedAreas); } catch (e) { console.error(e); }
-    }
-    const storedProcesses = localStorage.getItem("YOKOHAMA_MASTER_PROCESSES");
-    if (storedProcesses) {
-      try { YOKOHAMA_PROCESSES = JSON.parse(storedProcesses); } catch (e) { console.error(e); }
-    }
-  } else {
-    YOKOHAMA_MACHINES = [...INITIAL_MACHINES_BACKUP];
-    YOKOHAMA_AREAS = [...INITIAL_AREAS_BACKUP];
-    YOKOHAMA_PROCESSES = [...INITIAL_PROCESSES_BACKUP];
-    saveMasterDataToStorage();
   }
+  if (!machinesLoaded) {
+    YOKOHAMA_MACHINES = JSON.parse(JSON.stringify(INITIAL_MACHINES_BACKUP));
+  }
+
+  const storedAreas = localStorage.getItem("YOKOHAMA_MASTER_AREAS");
+  let areasLoaded = false;
+  if (storedAreas) {
+    try {
+      const parsed = JSON.parse(storedAreas);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        YOKOHAMA_AREAS = parsed;
+        areasLoaded = true;
+      }
+    } catch (e) { console.error("Failed to parse master areas", e); }
+  }
+  if (!areasLoaded) {
+    YOKOHAMA_AREAS = JSON.parse(JSON.stringify(INITIAL_AREAS_BACKUP));
+  }
+
+  const storedProcesses = localStorage.getItem("YOKOHAMA_MASTER_PROCESSES");
+  let procLoaded = false;
+  if (storedProcesses) {
+    try {
+      const parsed = JSON.parse(storedProcesses);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        YOKOHAMA_PROCESSES = parsed;
+        procLoaded = true;
+      }
+    } catch (e) { console.error("Failed to parse master processes", e); }
+  }
+  if (!procLoaded) {
+    YOKOHAMA_PROCESSES = JSON.parse(JSON.stringify(INITIAL_PROCESSES_BACKUP));
+  }
+
   const storedCats = localStorage.getItem("YOKOHAMA_MASTER_CATEGORIES");
+  let catsLoaded = false;
   if (storedCats) {
     try {
-      masterCategories = JSON.parse(storedCats);
-    } catch (e) {
-      console.error("Failed to parse master categories", e);
-    }
+      const parsed = JSON.parse(storedCats);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        masterCategories = parsed;
+        catsLoaded = true;
+      }
+    } catch (e) { console.error("Failed to parse master categories", e); }
   }
+  if (!catsLoaded) {
+    masterCategories = ["NSNL", "IPC", "Printer", "Scanner", "Infra", "MES", "Hardware / PC", "Network / Switch", "PLC / SCADA", "Other"];
+  }
+
   const storedResp = localStorage.getItem("YOKOHAMA_MASTER_RESPONSIBILITIES");
+  let respLoaded = false;
   if (storedResp) {
     try {
-      masterResponsibilities = JSON.parse(storedResp);
-    } catch (e) {
-      console.error("Failed to parse master responsibilities", e);
-    }
+      const parsed = JSON.parse(storedResp);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        masterResponsibilities = parsed;
+        respLoaded = true;
+      }
+    } catch (e) { console.error("Failed to parse master responsibilities", e); }
   }
+  if (!respLoaded) {
+    masterResponsibilities = ["ATC", "MELSS"];
+  }
+
   const storedNatures = localStorage.getItem("YOKOHAMA_MASTER_NATURES");
+  let naturesLoaded = false;
   if (storedNatures) {
     try {
-      masterNatures = JSON.parse(storedNatures);
-    } catch (e) {
-      console.error("Failed to parse master natures", e);
-    }
+      const parsed = JSON.parse(storedNatures);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        masterNatures = parsed;
+        naturesLoaded = true;
+      }
+    } catch (e) { console.error("Failed to parse master natures", e); }
   }
+  if (!naturesLoaded) {
+    masterNatures = JSON.parse(JSON.stringify(INITIAL_NATURES_BACKUP));
+  }
+
+  saveMasterDataToStorage();
   rebuildMachineMap();
   window.YOKOHAMA_AREAS = YOKOHAMA_AREAS;
   window.YOKOHAMA_MACHINES = YOKOHAMA_MACHINES;
+  window.YOKOHAMA_PROCESSES = YOKOHAMA_PROCESSES;
 
   const version = localStorage.getItem("YOKOHAMA_DATASET_VERSION");
   const stored = localStorage.getItem("YOKOHAMA_DOWNTIME_RECORDS");
@@ -2645,8 +2698,11 @@ function initFormControls() {
       btnCompleted.className = "segmented-option active-completed";
       btnOpen.className = "segmented-option";
       if (closedDateContainer) closedDateContainer.style.opacity = "1";
-      if (closedDateInput && !closedDateInput.value) {
-        closedDateInput.value = new Date().toISOString().split("T")[0];
+      if (closedDateInput) {
+        closedDateInput.disabled = false;
+        if (!closedDateInput.value) {
+          closedDateInput.value = document.getElementById("issueDate")?.value || new Date().toISOString().split("T")[0];
+        }
       }
     });
 
@@ -2655,6 +2711,10 @@ function initFormControls() {
       btnOpen.className = "segmented-option active-open";
       btnCompleted.className = "segmented-option";
       if (closedDateContainer) closedDateContainer.style.opacity = "0.6";
+      if (closedDateInput) {
+        closedDateInput.value = "";
+        closedDateInput.disabled = true;
+      }
     });
   }
 }
@@ -2738,14 +2798,26 @@ function setupEventListeners() {
 
   if (dateFilter) {
     dateFilter.addEventListener("change", (e) => {
-      currentFilter.dateFrom = e.target.value;
+      const val = e.target.value;
+      if (dateToFilter && dateToFilter.value && val && dateToFilter.value < val) {
+        showToast("Invalid range: End Date cannot be earlier than Start Date.", "warning");
+        e.target.value = currentFilter.dateFrom || "";
+        return;
+      }
+      currentFilter.dateFrom = val;
       renderRecordsTable();
     });
   }
 
   if (dateToFilter) {
     dateToFilter.addEventListener("change", (e) => {
-      currentFilter.dateTo = e.target.value;
+      const val = e.target.value;
+      if (dateFilter && dateFilter.value && val && val < dateFilter.value) {
+        showToast("Invalid range: End Date cannot be earlier than Start Date.", "warning");
+        e.target.value = currentFilter.dateTo || "";
+        return;
+      }
+      currentFilter.dateTo = val;
       renderRecordsTable();
     });
   }
@@ -3177,29 +3249,34 @@ window.syncFormHiddenInputs = syncFormHiddenInputs;
 function handleFormSubmit(e) {
   e.preventDefault();
 
+  if (window.isDowntimeSubmitting) return;
+
   syncFormHiddenInputs();
 
-  const issueDate = document.getElementById("issueDate").value;
-  const nature = document.getElementById("nature").value;
-  const area = document.getElementById("area").value;
-  const machineNo = document.getElementById("machineNo").value;
+  const issueDate = (document.getElementById("issueDate")?.value || "").trim();
+  const nature = (document.getElementById("nature")?.value || "").trim();
+  const area = (document.getElementById("area")?.value || "").trim();
+  const machineNo = (document.getElementById("machineNo")?.value || "").trim();
   const isCritical = document.getElementById("isCritical") ? document.getElementById("isCritical").value : "No";
   const machineType = document.getElementById("machineType") ? document.getElementById("machineType").value : "";
-  const downtimeMinutes = parseInt(document.getElementById("downtimeMinutes").value, 10);
-  const affectedMachines = parseInt(document.getElementById("affectedMachines") ? document.getElementById("affectedMachines").value : 1, 10) || (machinesList.length > 0 ? machinesList.length : 1);
-  const totalDowntimeMinutes = parseInt(document.getElementById("totalDowntimeMinutes") ? document.getElementById("totalDowntimeMinutes").value : 0, 10) || (downtimeMinutes * affectedMachines);
-  const category = document.getElementById("category").value;
-  const issueDetails = document.getElementById("issueDetails") ? document.getElementById("issueDetails").value.trim() : "";
-  const actionPlan = document.getElementById("actionPlan") ? document.getElementById("actionPlan").value.trim() : "";
+  const downtimeMinutes = parseInt(document.getElementById("downtimeMinutes")?.value, 10);
+  const affectedInput = document.getElementById("affectedMachines")?.value;
+  const affectedMachines = parseInt(affectedInput, 10) || 1;
+  const totalDowntimeMinutes = parseInt(document.getElementById("totalDowntimeMinutes")?.value, 10) || (downtimeMinutes * affectedMachines);
+  const category = (document.getElementById("category")?.value || "").trim();
+  const issueDetails = (document.getElementById("issueDetails")?.value || "").trim();
+  const actionPlan = (document.getElementById("actionPlan")?.value || "").trim();
 
-  const responsibility = document.getElementById("responsibility").value;
-  const closedDate = document.getElementById("closedDate").value;
-  const solvedBy = document.getElementById("solvedBy").value;
-  const status = document.getElementById("closureStatus").value;
-  const remarks = document.getElementById("remarks").value.trim();
+  const responsibility = (document.getElementById("responsibility")?.value || "").trim();
+  const closedDate = (document.getElementById("closedDate")?.value || "").trim();
+  const solvedBy = (document.getElementById("solvedBy")?.value || "").trim();
+  const status = (document.getElementById("closureStatus")?.value || "Open").trim();
+  const remarks = (document.getElementById("remarks")?.value || "").trim();
 
-  if (!issueDate) {
-    showToast("Please select the Issue Date.", "warning");
+  // 1. Core Field Validations
+  if (!issueDate || !/^\\d{4}-\\d{2}-\\d{2}$/.test(issueDate)) {
+    showToast("Please select a valid Issue Date (YYYY-MM-DD).", "warning");
+    document.getElementById("issueDate")?.focus();
     return;
   }
   if (!area && formSelectedAreas.size === 0) {
@@ -3211,18 +3288,49 @@ function handleFormSubmit(e) {
     return;
   }
   if (isNaN(downtimeMinutes) || downtimeMinutes <= 0) {
-    showToast("Please enter a valid numeric downtime in minutes.", "warning");
-    document.getElementById("downtimeMinutes").focus();
+    showToast("Please enter a valid numeric downtime in minutes (must be greater than 0).", "warning");
+    document.getElementById("downtimeMinutes")?.focus();
+    return;
+  }
+  if (isNaN(affectedMachines) || affectedMachines < 1) {
+    showToast("Affected machines count must be an integer of at least 1.", "warning");
+    document.getElementById("affectedMachines")?.focus();
     return;
   }
   if (!issueDetails) {
     showToast("Please select or enter the Issue Details.", "warning");
+    document.getElementById("issueDetails")?.focus();
     return;
   }
   if (!solvedBy) {
     showToast("Please select or specify the Responsible Person.", "warning");
-    document.getElementById("solvedBy").focus();
+    document.getElementById("solvedBy")?.focus();
     return;
+  }
+
+  // 2. Status & Closed Date Validations
+  const isClosed = status === "Completed" || status === "Closed";
+  let finalClosedDate = "";
+
+  if (isClosed) {
+    if (!closedDate) {
+      showToast("Closed Date is strictly required when Status is Completed.", "warning");
+      const cEl = document.getElementById("closedDate");
+      if (cEl) { cEl.disabled = false; cEl.focus(); }
+      return;
+    }
+    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(closedDate)) {
+      showToast("Closed Date must be in YYYY-MM-DD format.", "warning");
+      return;
+    }
+    if (closedDate < issueDate) {
+      showToast(`Closed Date (${closedDate}) cannot be earlier than Issue Date (${issueDate}).`, "error");
+      document.getElementById("closedDate")?.focus();
+      return;
+    }
+    finalClosedDate = closedDate;
+  } else {
+    finalClosedDate = "";
   }
 
   const totalMachinesCount = (typeof YOKOHAMA_MACHINES !== "undefined" && Array.isArray(YOKOHAMA_MACHINES)) ? YOKOHAMA_MACHINES.length : 437;
@@ -3302,11 +3410,67 @@ function handleFormSubmit(e) {
     finalProcess = "ALL";
   }
 
-  if (editingRecordId) {
-    const index = downtimeRecords.findIndex(r => r.id === editingRecordId);
-    if (index !== -1) {
-      downtimeRecords[index] = {
-        ...downtimeRecords[index],
+  // 3. Duplicate Submission Detection (Step 13)
+  if (!editingRecordId) {
+    const isDuplicate = downtimeRecords.some(r =>
+      r.issueDate === issueDate &&
+      r.machineNo === finalMachineNo &&
+      (r.issueDetails || '').trim().toLowerCase() === issueDetails.toLowerCase() &&
+      (parseInt(r.downtimeMinutes, 10) || 0) === downtimeMinutes
+    );
+    if (isDuplicate) {
+      showToast(`Duplicate entry rejected: an incident for ${finalMachineNo} on ${issueDate} with identical downtime and details already exists.`, "warning");
+      return;
+    }
+  }
+
+  window.isDowntimeSubmitting = true;
+  const submitBtn = document.getElementById("btn-save-record");
+  const originalBtnHTML = submitBtn ? submitBtn.innerHTML : "";
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Saving...`;
+  }
+
+  try {
+    if (editingRecordId) {
+      const index = downtimeRecords.findIndex(r => r.id === editingRecordId);
+      if (index !== -1) {
+        downtimeRecords[index] = {
+          ...downtimeRecords[index],
+          issueDate,
+          date: issueDate,
+          nature,
+          area: finalArea,
+          process: finalProcess,
+          machineNo: finalMachineNo,
+          machineType: finalMachineType,
+          isCritical: finalCrit,
+          downtimeMinutes,
+          affectedMachines,
+          totalDowntimeMinutes,
+          category,
+          issueDetails,
+          actionPlan,
+          responsibility,
+          closedDate: finalClosedDate,
+          solvedBy,
+          responsiblePerson: solvedBy,
+          status,
+          remarks,
+          updatedAt: new Date().toISOString()
+        };
+        showToast(`Record ${editingRecordId} updated successfully!`, "success");
+        editingRecordId = null;
+      }
+    } else {
+      // SINGLE LINE OUTPUT FOR THE ENTIRE BREAKDOWN
+      const year = new Date().getFullYear();
+      const recordNum = String(downtimeRecords.length + 1).padStart(3, "0");
+      const newId = `YOKO-DT-${year}-${recordNum}`;
+
+      const newRecord = {
+        id: newId,
         issueDate,
         date: issueDate,
         nature,
@@ -3322,67 +3486,40 @@ function handleFormSubmit(e) {
         issueDetails,
         actionPlan,
         responsibility,
-        closedDate: status === "Completed" ? (closedDate || issueDate) : "",
+        closedDate: finalClosedDate,
         solvedBy,
         responsiblePerson: solvedBy,
         status,
         remarks,
-        updatedAt: new Date().toISOString()
+        createdAt: new Date().toISOString()
       };
-      showToast(`Record ${editingRecordId} updated successfully!`, "success");
-      editingRecordId = null;
-      document.getElementById("btn-save-record").innerHTML = `<i class="fa-solid fa-floppy-disk mr-1.5"></i> Save Entry`;
+
+      downtimeRecords.unshift(newRecord);
+      showToast(`Downtime entry ${newId} saved as a single line output (${finalMachineNo} • ${finalArea} • ${finalProcess})!`, "success");
     }
-  } else {
-    // SINGLE LINE OUTPUT FOR THE ENTIRE BREAKDOWN
-    const year = new Date().getFullYear();
-    const recordNum = String(downtimeRecords.length + 1).padStart(3, "0");
-    const newId = `YOKO-DT-${year}-${recordNum}`;
 
-    const newRecord = {
-      id: newId,
-      issueDate,
-      date: issueDate,
-      nature,
-      area: finalArea,
-      process: finalProcess,
-      machineNo: finalMachineNo,
-      machineType: finalMachineType,
-      isCritical: finalCrit,
-      downtimeMinutes,
-      affectedMachines,
-      totalDowntimeMinutes,
-      category,
-      issueDetails,
-      actionPlan,
-      responsibility,
-      closedDate: status === "Completed" ? (closedDate || issueDate) : "",
-      solvedBy,
-      responsiblePerson: solvedBy,
-      status,
-      remarks,
-      createdAt: new Date().toISOString()
-    };
+    saveToStorage();
+    window.downtimeRecords = downtimeRecords;
+    resetForm();
 
-    downtimeRecords.unshift(newRecord);
-    showToast(`Downtime entry ${newId} saved as a single line output (${finalMachineNo} • ${finalArea} • ${finalProcess})!`, "success");
-  }
+    // Refresh multi-select filter lists on table as well
+    initMachineMultiSelectDropdown();
+    initAreaMultiSelectDropdown();
+    populateDashboardMonths();
+    updateMaintenanceLogCount();
 
-  saveToStorage();
-  window.downtimeRecords = downtimeRecords;
-  resetForm();
-
-  // Refresh multi-select filter lists on table as well
-  initMachineMultiSelectDropdown();
-  initAreaMultiSelectDropdown();
-  populateDashboardMonths();
-  updateMaintenanceLogCount();
-
-  const user = getCurrentUser();
-  if (user && (user.allowedTabs.includes("logs") || user.allowedTabs.includes("kpi"))) {
-    renderRecordsTable();
-    renderKPIs();
-    renderCharts();
+    const user = getCurrentUser();
+    if (user && (user.allowedTabs.includes("logs") || user.allowedTabs.includes("kpi"))) {
+      renderRecordsTable();
+      renderKPIs();
+      renderCharts();
+    }
+  } finally {
+    window.isDowntimeSubmitting = false;
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = `<i class="fa-solid fa-floppy-disk mr-1.5"></i> Save Entry`;
+    }
   }
 }
 window.handleFormSubmit = handleFormSubmit;
@@ -3395,12 +3532,24 @@ function resetForm() {
 
   const btnCompleted = document.getElementById("btn-status-completed");
   const btnOpen = document.getElementById("btn-status-open");
+  const closedDateInput = document.getElementById("closedDate");
+  const closedDateContainer = document.getElementById("closed-date-container");
+
   if (btnCompleted && btnOpen) {
     document.getElementById("closureStatus").value = "Open";
     btnOpen.className = "segmented-option active-open";
     btnCompleted.className = "segmented-option";
-    const closedDateContainer = document.getElementById("closed-date-container");
     if (closedDateContainer) closedDateContainer.style.opacity = "0.6";
+  }
+
+  if (closedDateInput) {
+    closedDateInput.value = "";
+    closedDateInput.disabled = true;
+  }
+
+  const saveBtn = document.getElementById("btn-save-record");
+  if (saveBtn) {
+    saveBtn.innerHTML = `<i class="fa-solid fa-floppy-disk mr-1.5"></i> Save Entry`;
   }
 
   if (document.getElementById("machineType")) document.getElementById("machineType").value = "";
@@ -3429,11 +3578,6 @@ function resetForm() {
   if (issueInput) issueInput.value = "";
   const actionInput = document.getElementById("actionPlan");
   if (actionInput) actionInput.value = "";
-
-  const saveBtn = document.getElementById("btn-save-record");
-  if (saveBtn) {
-    saveBtn.innerHTML = `<i class="fa-solid fa-floppy-disk mr-1.5"></i> Save Entry`;
-  }
 }
 window.resetForm = resetForm;
 
@@ -4480,6 +4624,11 @@ window.toggleRecordStatus = function(id) {
 };
 
 window.deleteRecord = function(id) {
+  const user = (typeof getCurrentUser === "function") ? getCurrentUser() : null;
+  if (!user || (user.role !== "ADMIN" && user.role !== "SUPERVISOR")) {
+    showToast("Access Denied: Only Admins and Supervisors can delete incident records.", "error");
+    return;
+  }
   if (confirm(`Are you sure you want to delete downtime record ${id}?`)) {
     downtimeRecords = downtimeRecords.filter(r => r.id !== id);
     window.downtimeRecords = downtimeRecords;
@@ -4505,12 +4654,17 @@ function updateMaintenanceLogCount() {
 window.updateMaintenanceLogCount = updateMaintenanceLogCount;
 
 window.clearAllIncidentLogs = function() {
+  const user = (typeof getCurrentUser === "function") ? getCurrentUser() : null;
+  if (!user || user.role !== "ADMIN") {
+    showToast("Access Denied: Only Administrators can clear all incident logs.", "error");
+    return;
+  }
   if (downtimeRecords.length === 0) {
     showToast("Incident logs are already empty.", "info");
     return;
   }
   const confirmed = (typeof confirm === "function")
-    ? confirm(`Are you sure you want to empty all ${downtimeRecords.length} incident logs? This will reset the incident table and analytics to zero.`)
+    ? confirm(`DANGER: Are you sure you want to permanently clear all ${downtimeRecords.length} incident logs? This action cannot be undone.`)
     : true;
   if (confirmed) {
     downtimeRecords = [];
@@ -4696,6 +4850,12 @@ window.onDashboardDateFilterChange = function() {
   const sd = sdInput ? sdInput.value : "";
   const ed = edInput ? edInput.value : "";
 
+  if (sd && ed && ed < sd) {
+    showToast("Invalid range: End Date cannot be earlier than Start Date.", "warning");
+    if (edInput) edInput.value = dashboardDateFilter.endDate || "";
+    return;
+  }
+
   dashboardDateFilter.startDate = sd;
   dashboardDateFilter.endDate = ed;
 
@@ -4756,16 +4916,17 @@ function escapeHtml(str) {
 // --- KPI Calculations ---
 function renderKPIs() {
   const records = getFilteredDashboardRecords();
-  const totalDowntimeMinutes = records.reduce((acc, r) => acc + (parseInt(r.downtimeMinutes, 10) || 0), 0);
-  const totalHours = (totalDowntimeMinutes / 60).toFixed(1);
-  const openCount = records.filter(r => r.status === "Open").length;
-  const completedCount = records.filter(r => r.status === "Completed").length;
-  const resolutionRate = records.length > 0 ? Math.round((completedCount / records.length) * 100) : 100;
+  const hasData = records.length > 0;
+  const totalDowntimeMinutes = hasData ? records.reduce((acc, r) => acc + (parseInt(r.downtimeMinutes, 10) || 0), 0) : 0;
+  const totalHours = hasData ? (totalDowntimeMinutes / 60).toFixed(1) : "0.0";
+  const openCount = hasData ? records.filter(r => r.status === "Open").length : 0;
+  const completedRecords = hasData ? records.filter(r => r.status === "Completed") : [];
+  const completedCount = completedRecords.length;
+  const resolutionRateText = hasData ? `${Math.round((completedCount / records.length) * 100)}%` : "N/A";
   
-  const completedRecords = records.filter(r => r.status === "Completed");
-  const mttrMinutes = completedRecords.length > 0
-    ? Math.round(completedRecords.reduce((acc, r) => acc + (parseInt(r.downtimeMinutes, 10) || 0), 0) / completedRecords.length)
-    : 0;
+  const mttrText = (hasData && completedRecords.length > 0)
+    ? `${Math.round(completedRecords.reduce((acc, r) => acc + (parseInt(r.downtimeMinutes, 10) || 0), 0) / completedRecords.length)} min`
+    : "N/A";
 
   const elTotalHrs = document.getElementById("kpi-total-hours");
   const elTotalMins = document.getElementById("kpi-total-mins");
@@ -4785,8 +4946,8 @@ function renderKPIs() {
   if (elTotalHrs) elTotalHrs.textContent = `${totalHours} hrs`;
   if (elTotalMins) elTotalMins.textContent = `${totalDowntimeMinutes} mins`;
   if (elOpenAlerts) elOpenAlerts.textContent = openCount;
-  if (elMttr) elMttr.textContent = `${mttrMinutes} min`;
-  if (elResolutionRate) elResolutionRate.textContent = `${resolutionRate}%`;
+  if (elMttr) elMttr.textContent = mttrText;
+  if (elResolutionRate) elResolutionRate.textContent = resolutionRateText;
   if (elTotalIncidents) elTotalIncidents.textContent = `${records.length} Incidents (${badgeText})`;
 }
 window.renderKPIs = renderKPIs;
@@ -4797,16 +4958,19 @@ function renderCharts() {
 
   const records = getFilteredDashboardRecords();
   const periodDays = getDashboardPeriodDays();
-  const standardAreas = ["Plant 1", "Plant 2", "Plant 3", "Plant 4", "4Roll shed", "Mixing Shed", "FID", "IT infra"];
+  const standardAreas = (typeof YOKOHAMA_AREAS !== "undefined" && YOKOHAMA_AREAS.length > 0)
+    ? YOKOHAMA_AREAS.slice(0, 8)
+    : ["Plant 1", "Plant 2", "Plant 3", "Plant 4", "4Roll shed", "Mixing Shed", "FID", "IT infra"];
 
   // -------------------------------------------------------------
   // Chart 1A: Automotive Speedometer Gauge ("Overall Availability")
   // -------------------------------------------------------------
+  const hasData = records.length > 0;
   const totalPlantOperatingMinutes = periodDays * 24 * 60 * standardAreas.length;
-  const totalDowntimeMinutes = records.reduce((acc, r) => acc + (parseInt(r.downtimeMinutes, 10) || 0), 0);
+  const totalDowntimeMinutes = hasData ? records.reduce((acc, r) => acc + (parseInt(r.downtimeMinutes, 10) || 0), 0) : 0;
   const totalUptimeMinutes = Math.max(0, totalPlantOperatingMinutes - totalDowntimeMinutes);
-  const overallAvailability = Math.min(100, Math.max(0, (totalUptimeMinutes / totalPlantOperatingMinutes) * 100));
-  const overallAvailFormatted = overallAvailability.toFixed(2);
+  let overallAvailability = 0;
+  let overallAvailFormatted = "N/A";
 
   const gaugeTextEl = document.getElementById("gaugePercentText");
   const gaugeBadgeEl = document.getElementById("gaugeStatusBadge");
@@ -4816,15 +4980,22 @@ function renderCharts() {
   let gaugeStatusText = "";
   let gaugeBadgeClass = "";
 
-  if (overallAvailability < 95.0) {
-    gaugeStatusText = "Critical";
-    gaugeBadgeClass = "text-[10px] font-bold px-2 py-0.5 rounded-full border bg-rose-100 text-rose-800 border-rose-300";
-  } else if (overallAvailability < 99.0) {
-    gaugeStatusText = "Warning";
-    gaugeBadgeClass = "text-[10px] font-bold px-2 py-0.5 rounded-full border bg-amber-100 text-amber-800 border-amber-300";
+  if (hasData) {
+    overallAvailability = Math.min(100, Math.max(0, (totalUptimeMinutes / totalPlantOperatingMinutes) * 100));
+    overallAvailFormatted = `${overallAvailability.toFixed(2)}%`;
+    if (overallAvailability < 95.0) {
+      gaugeStatusText = "Critical";
+      gaugeBadgeClass = "text-[10px] font-bold px-2 py-0.5 rounded-full border bg-rose-100 text-rose-800 border-rose-300";
+    } else if (overallAvailability < 99.0) {
+      gaugeStatusText = "Warning";
+      gaugeBadgeClass = "text-[10px] font-bold px-2 py-0.5 rounded-full border bg-amber-100 text-amber-800 border-amber-300";
+    }
+  } else {
+    gaugeStatusText = "No Data";
+    gaugeBadgeClass = "text-[10px] font-bold px-2 py-0.5 rounded-full border bg-slate-100 text-slate-600 border-slate-300";
   }
 
-  if (gaugeTextEl) gaugeTextEl.textContent = `${overallAvailFormatted}%`;
+  if (gaugeTextEl) gaugeTextEl.textContent = overallAvailFormatted;
   if (gaugeBadgeEl) {
     if (gaugeStatusText) {
       gaugeBadgeEl.textContent = gaugeStatusText;
@@ -4834,7 +5005,7 @@ function renderCharts() {
       gaugeBadgeEl.className = "hidden";
     }
   }
-  if (gaugeUptimeEl) gaugeUptimeEl.textContent = `${Math.round(totalUptimeMinutes / 60)} hrs`;
+  if (gaugeUptimeEl) gaugeUptimeEl.textContent = hasData ? `${Math.round(totalUptimeMinutes / 60)} hrs` : "N/A";
   if (gaugeDowntimeEl) gaugeDowntimeEl.textContent = `${(totalDowntimeMinutes / 60).toFixed(1)} hrs (${totalDowntimeMinutes}m)`;
 
   const ctxGauge = document.getElementById("gaugeAvailability");
@@ -4844,7 +5015,19 @@ function renderCharts() {
     let gaugeDatasets = [];
     let needleColor = "#E60012";
 
-    if (speedometerColorTheme === "multi") {
+    if (!hasData) {
+      gaugeDatasets = [{
+        data: [0, 100],
+        backgroundColor: ["#CBD5E1", "#F1F5F9"],
+        hoverBackgroundColor: ["#CBD5E1", "#F1F5F9"],
+        borderWidth: 0,
+        circumference: 180,
+        rotation: -90,
+        cutout: "75%",
+        borderRadius: [8, 0]
+      }];
+      needleColor = "#94A3B8";
+    } else if (speedometerColorTheme === "multi") {
       // Automotive 3-Zone Car Tachometer / Speedometer Dial
       gaugeDatasets = [{
         data: [90, 8, 2],
@@ -4922,7 +5105,7 @@ function renderCharts() {
         }
 
         // Calculate needle angle for availability percentage
-        const clampedVal = Math.min(100, Math.max(0, overallAvailability));
+        const clampedVal = hasData ? Math.min(100, Math.max(0, overallAvailability)) : 0;
         const needleAngle = Math.PI + (clampedVal / 100) * Math.PI;
         const needleLength = innerRadius + (outerRadius - innerRadius) * 0.75;
 
@@ -5937,13 +6120,14 @@ function renderAreaUptimeMatrix() {
 
   let html = "";
 
+  const hasData = records.length > 0;
   standardAreas.forEach(area => {
     const areaRecs = records.filter(r => r.area === area);
     const downtimeMins = areaRecs.reduce((acc, r) => acc + (parseInt(r.downtimeMinutes, 10) || 0), 0);
     const incidentCount = areaRecs.length;
     const uptimeMins = Math.max(0, operatingMins - downtimeMins);
     const uptimePct = Math.min(100, Math.max(0, (uptimeMins / operatingMins) * 100));
-    const uptimeFormatted = uptimePct.toFixed(2);
+    const uptimeFormatted = hasData ? uptimePct.toFixed(2) : "N/A";
 
     let statusBadgeClass = "bg-emerald-50 text-emerald-700 border-emerald-200";
     let statusText = "Optimal";
@@ -5952,7 +6136,14 @@ function renderAreaUptimeMatrix() {
     let textColor = "text-emerald-600";
     let topBarColor = "bg-emerald-500";
 
-    if (uptimePct < 95.0) {
+    if (!hasData) {
+      statusBadgeClass = "bg-slate-50 text-slate-600 border-slate-200";
+      statusText = "No Data";
+      dotClass = "bg-slate-400";
+      progressBarClass = "bg-slate-300";
+      textColor = "text-slate-500";
+      topBarColor = "bg-slate-300";
+    } else if (uptimePct < 95.0) {
       statusBadgeClass = "bg-rose-50 text-rose-700 border-rose-200";
       statusText = "Critical";
       dotClass = "bg-rose-500";
@@ -5995,13 +6186,13 @@ function renderAreaUptimeMatrix() {
 
           <!-- Availability Value & Target -->
           <div class="flex items-baseline justify-between mt-2 mb-1">
-            <span class="text-2xl sm:text-3xl font-black font-mono tracking-tight ${textColor}">${uptimeFormatted}%</span>
+            <span class="text-2xl sm:text-3xl font-black font-mono tracking-tight ${textColor}">${uptimeFormatted}${hasData ? '%' : ''}</span>
             <span class="text-[9px] font-bold text-slate-400 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded font-mono">TGT 99.5%</span>
           </div>
 
           <!-- Clean Progress Bar -->
           <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden mb-3 border border-slate-100">
-            <div class="h-full rounded-full transition-all duration-500 ${progressBarClass}" style="width: ${Math.min(100, Math.max(0, uptimePct))}%"></div>
+            <div class="h-full rounded-full transition-all duration-500 ${progressBarClass}" style="width: ${hasData ? Math.min(100, Math.max(0, uptimePct)) : 0}%"></div>
           </div>
 
           <!-- Micro-Telemetry Grid -->
@@ -7076,6 +7267,7 @@ function parseDowntimeExcelFile(file) {
       ]);
 
       const parsed = [];
+      let skippedCount = 0;
       for (let r = headerRowIdx + 1; r < rawRows.length; r++) {
         const row = rawRows[r];
         if (!row || !Array.isArray(row) || row.length === 0) continue;
@@ -7088,10 +7280,16 @@ function parseDowntimeExcelFile(file) {
 
         const rawMach = machCol !== -1 ? row[machCol] : null;
         const rawDate = dateCol !== -1 ? row[dateCol] : null;
-        if (!rawMach || !rawDate) continue;
+        if (!rawMach || !rawDate) {
+          skippedCount++;
+          continue;
+        }
 
         const mCode = String(rawMach).trim();
-        if (!mCode || mCode.toLowerCase() === "total" || mCode.toLowerCase() === "machine") continue;
+        if (!mCode || mCode.toLowerCase() === "total" || mCode.toLowerCase() === "machine") {
+          skippedCount++;
+          continue;
+        }
 
         // Format Date
         let dateStr = "";
@@ -7103,7 +7301,7 @@ function parseDowntimeExcelFile(file) {
         } else {
           const s = String(rawDate).trim();
           if (s.includes("/") || s.includes("-")) {
-            const parts = s.replace(/\//g, "-").split("-");
+            const parts = s.replace(/\\//g, "-").split("-");
             if (parts.length === 3) {
               if (parts[0].length === 4) {
                 dateStr = `${parts[0]}-${parts[1].padStart(2, "0")}-${parts[2].substring(0, 2).padStart(2, "0")}`;
@@ -7118,6 +7316,11 @@ function parseDowntimeExcelFile(file) {
           } else {
             dateStr = s.substring(0, 10);
           }
+        }
+
+        if (!dateStr || dateStr.length < 8) {
+          skippedCount++;
+          continue;
         }
 
         // Resolve Area & Process
@@ -7146,6 +7349,10 @@ function parseDowntimeExcelFile(file) {
         if (rawDtMin !== null && rawDtMin !== undefined) {
           dtMin = parseInt(rawDtMin, 10);
           if (isNaN(dtMin)) dtMin = Math.round(parseFloat(rawDtMin) || 0);
+        }
+        if (dtMin < 0) {
+          skippedCount++;
+          continue; // Prevent negative downtime
         }
 
         let affected = 1;
@@ -7209,6 +7416,8 @@ function parseDowntimeExcelFile(file) {
         let closedDate = (closedCol !== -1 && row[closedCol]) ? String(row[closedCol]).trim() : "";
         if (!closedDate && status === "Completed") {
           closedDate = dateStr;
+        } else if (closedDate && status === "Completed" && closedDate < dateStr) {
+          closedDate = dateStr; // Cannot close before issue date
         }
 
         // Remarks
@@ -7257,7 +7466,8 @@ function parseDowntimeExcelFile(file) {
       pendingImportRecords = parsed;
       window.pendingImportRecords = pendingImportRecords;
       renderImportPreviewUI(file.name);
-      showToast(`Parsed ${parsed.length} downtime records from "${file.name}"!`, "success");
+      const skippedMsg = skippedCount > 0 ? ` (${skippedCount} invalid rows skipped)` : "";
+      showToast(`Parsed ${parsed.length} downtime records from "${file.name}"!${skippedMsg}`, "success");
     } catch (err) {
       console.error("Error parsing downtime Excel file:", err);
       showToast("Error reading downtime Excel file: " + err.message, "warning");
@@ -7324,6 +7534,11 @@ function renderImportPreviewUI(fileName) {
 }
 
 window.confirmDowntimeImport = function() {
+  const user = (typeof getCurrentUser === "function") ? getCurrentUser() : null;
+  if (!user || (!user.canImport && user.role !== "ADMIN" && user.role !== "SUPERVISOR")) {
+    showToast("Access Denied: Only Admins and Supervisors can import records.", "error");
+    return;
+  }
   if (!pendingImportRecords || pendingImportRecords.length === 0) {
     showToast("No records available to import.", "warning");
     return;

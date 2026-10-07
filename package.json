@@ -4,6 +4,7 @@
   "description": "Yokohama MES Downtime & Availability Tracker Desktop Application",
   "scripts": {
     "start": "python -m http.server 8080",
+    "test": "node tests/run_tests.js",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"
