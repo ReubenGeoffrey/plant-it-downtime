@@ -5,6 +5,7 @@
   "scripts": {
     "start": "python -m http.server 8080",
     "test": "node tests/run_tests.js",
+    "test:acceptance": "node tests/run_acceptance_tests.js",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"
