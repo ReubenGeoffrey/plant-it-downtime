@@ -141,6 +141,7 @@ async function authenticateUserWithSupabase(username, password) {
   const cleanUsername = (username || '').trim().toLowerCase();
   const passwordHash = await sha256(password);
 
+  let cloudConnected = false;
   const client = getSupabaseClient();
   if (client) {
     try {
@@ -151,8 +152,12 @@ async function authenticateUserWithSupabase(username, password) {
         .eq('password_hash', passwordHash)
         .maybeSingle();
 
-      if (!error && data) return data;
-      if (error) console.warn('[Supabase] SDK auth warning, testing REST:', error);
+      if (!error) {
+        cloudConnected = true;
+        if (data) return { user: data, connected: true };
+      } else {
+        console.warn('[Supabase] SDK auth warning, testing REST:', error);
+      }
     } catch (e) {
       console.warn('[Supabase] SDK auth exception, testing REST:', e);
     }
@@ -169,15 +174,17 @@ async function authenticateUserWithSupabase(username, password) {
       }
     });
     if (res.ok) {
+      cloudConnected = true;
       const list = await res.json();
       if (Array.isArray(list) && list.length > 0) {
-        return list[0];
+        return { user: list[0], connected: true };
       }
     }
   } catch (err) {
     console.error('[Supabase] Direct REST auth network error:', err);
   }
-  return null;
+
+  return { user: null, connected: cloudConnected };
 }
 window.authenticateUserWithSupabase = authenticateUserWithSupabase;
 
@@ -401,8 +408,10 @@ window.fetchCloudUserAccounts = fetchCloudUserAccounts;
 // 8. Update User Account (Sync password or username changes to Cloud)
 // ----------------------------------------------------------------------------
 async function updateCloudUserAccount(role, username, displayName, passwordHash) {
+  const roleUpper = (role || '').toUpperCase().trim();
+  const cleanUsername = (username || '').toLowerCase().trim();
   const patch = {
-    username: (username || '').toLowerCase().trim(),
+    username: cleanUsername,
     display_name: displayName,
     updated_at: new Date().toISOString()
   };
@@ -416,7 +425,7 @@ async function updateCloudUserAccount(role, username, displayName, passwordHash)
       const { data, error } = await client
         .from('user_accounts')
         .update(patch)
-        .eq('role', role)
+        .eq('role', roleUpper)
         .select();
 
       if (!error && Array.isArray(data) && data.length > 0) {
@@ -433,7 +442,7 @@ async function updateCloudUserAccount(role, username, displayName, passwordHash)
 
   // Fallback: Direct PostgREST API with Prefer: return=representation
   try {
-    const res = await fetch(`${REST_BASE}/user_accounts?role=eq.${encodeURIComponent(role)}`, {
+    const res = await fetch(`${REST_BASE}/user_accounts?role=eq.${encodeURIComponent(roleUpper)}`, {
       method: 'PATCH',
       headers: {
         ...DEFAULT_HEADERS,
@@ -465,16 +474,22 @@ window.updateCloudUserAccount = updateCloudUserAccount;
 // ----------------------------------------------------------------------------
 // 8. Real-time Subscription Channel
 // ----------------------------------------------------------------------------
-function initSupabaseRealtime(onIncidentChange) {
+function initSupabaseRealtime(onIncidentChange, onUserAccountChange) {
   const client = getSupabaseClient();
   if (!client) return null;
   try {
     const channel = client
-      .channel('public:incidents')
+      .channel('public:realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'incidents' }, (payload) => {
         console.log('[Supabase] Realtime incident event:', payload);
         if (typeof onIncidentChange === 'function') {
           onIncidentChange(payload);
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_accounts' }, (payload) => {
+        console.log('[Supabase] Realtime user_account event:', payload);
+        if (typeof onUserAccountChange === 'function') {
+          onUserAccountChange(payload);
         }
       })
       .subscribe((status) => {

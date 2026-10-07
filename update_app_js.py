@@ -388,7 +388,6 @@ const DEFAULT_USER_ACCOUNTS = {
   operator: {
     username: "operator",
     passwordHash: "5746b142df3f4ddbfdf0fa49c30fef6509f6e5a61fc726ff2c0cb77d7ffccff0",
-    plainPassword: "operator123",
     role: "OPERATOR",
     displayName: "Plant Operator",
     allowedTabs: ["entry"],
@@ -399,7 +398,6 @@ const DEFAULT_USER_ACCOUNTS = {
   supervisor: {
     username: "supervisor",
     passwordHash: "7b1c3e3a4e929f0464f89d79ca82fe5daff0da070c01a1e7b9dd4bcf6b509ef5",
-    plainPassword: "super123",
     role: "SUPERVISOR",
     displayName: "Production Supervisor",
     allowedTabs: ["entry", "kpi", "logs", "all"],
@@ -410,7 +408,6 @@ const DEFAULT_USER_ACCOUNTS = {
   admin: {
     username: "admin",
     passwordHash: "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9",
-    plainPassword: "admin123",
     role: "ADMIN",
     displayName: "Plant IT Admin",
     allowedTabs: ["entry", "kpi", "logs", "all", "settings"],
@@ -610,34 +607,62 @@ function initAuthSystem() {
 
       try {
         let matchedUser = null;
+        let cloudConnected = false;
 
-        // 1. Authenticate against Supabase Cloud Database
+        // 1. Authenticate against Supabase Cloud Database (Authoritative Source of Truth)
         if (typeof window.authenticateUserWithSupabase === "function") {
           try {
-            const cloudUser = await window.authenticateUserWithSupabase(usernameInput, passwordInput);
-            if (cloudUser) {
+            const authRes = await window.authenticateUserWithSupabase(usernameInput, passwordInput);
+            if (authRes && typeof authRes === "object") {
+              if (authRes.connected) {
+                cloudConnected = true;
+                if (authRes.user) {
+                  const cloudUser = authRes.user;
+                  matchedUser = {
+                    username: cloudUser.username,
+                    role: cloudUser.role,
+                    displayName: cloudUser.display_name,
+                    canExport: cloudUser.can_export !== false,
+                    canManageSettings: cloudUser.can_manage_settings === true,
+                    themeColor: cloudUser.theme_color || "red",
+                    allowedTabs: cloudUser.role === "OPERATOR" ? ["entry"] : (cloudUser.role === "SUPERVISOR" ? ["entry", "kpi", "logs", "all"] : ["entry", "kpi", "logs", "all", "settings"])
+                  };
+                  // Sync updated cloud account into local cache & delete plain password
+                  const rKey = (cloudUser.role || "").toLowerCase();
+                  if (USER_ACCOUNTS[rKey]) {
+                    USER_ACCOUNTS[rKey].username = cloudUser.username;
+                    USER_ACCOUNTS[rKey].displayName = cloudUser.display_name;
+                    USER_ACCOUNTS[rKey].passwordHash = cloudUser.password_hash;
+                    delete USER_ACCOUNTS[rKey].plainPassword;
+                    saveUserAccountsToStorage();
+                  }
+                }
+              }
+            } else if (authRes) {
               matchedUser = {
-                username: cloudUser.username,
-                role: cloudUser.role,
-                displayName: cloudUser.display_name,
-                canExport: cloudUser.can_export !== false,
-                canManageSettings: cloudUser.can_manage_settings === true,
-                themeColor: cloudUser.theme_color || "red",
-                allowedTabs: cloudUser.role === "OPERATOR" ? ["entry"] : (cloudUser.role === "SUPERVISOR" ? ["entry", "kpi", "logs", "all"] : ["entry", "kpi", "logs", "all", "settings"])
+                username: authRes.username,
+                role: authRes.role,
+                displayName: authRes.display_name,
+                canExport: authRes.can_export !== false,
+                canManageSettings: authRes.can_manage_settings === true,
+                themeColor: authRes.theme_color || "red",
+                allowedTabs: authRes.role === "OPERATOR" ? ["entry"] : (authRes.role === "SUPERVISOR" ? ["entry", "kpi", "logs", "all"] : ["entry", "kpi", "logs", "all", "settings"])
               };
             }
           } catch (cloudErr) {
-            console.warn("Cloud auth error, testing fallback:", cloudErr);
+            console.warn("Cloud auth error, testing offline fallback:", cloudErr);
+            cloudConnected = false;
           }
         }
 
-        // 2. Fallback to local accounts if offline or cloud unavailable
-        if (!matchedUser) {
+        // 2. Offline Fallback ONLY: If cloud is completely unreachable.
+        // If cloud was connected and found no user, credentials are wrong or old - DO NOT allow old credentials!
+        if (!matchedUser && !cloudConnected) {
           const pHash = await hashCredential(passwordInput);
           for (const key of Object.keys(USER_ACCOUNTS)) {
             const acc = USER_ACCOUNTS[key];
             if (acc && acc.username && acc.username.toLowerCase() === usernameInput) {
-              if (passwordInput === acc.plainPassword || (acc.passwordHash && pHash === acc.passwordHash)) {
+              if (acc.passwordHash && pHash === acc.passwordHash) {
                 matchedUser = acc;
                 break;
               }
@@ -1837,12 +1862,13 @@ window.handleUpdateUserAccount = async function(e, roleKey) {
       return;
     }
     const pHash = await hashCredential(newPass);
-    acc.plainPassword = newPass;
     acc.passwordHash = pHash;
+    delete acc.plainPassword;
     passwordChanged = true;
   }
 
   acc.username = newUsername;
+  delete acc.plainPassword;
   if (newDisplayName) acc.displayName = newDisplayName;
 
   saveUserAccountsToStorage();
@@ -2081,6 +2107,9 @@ async function initStorage() {
       const parsed = JSON.parse(storedUsers);
       if (parsed && typeof parsed === "object" && Object.keys(parsed).length > 0) {
         USER_ACCOUNTS = parsed;
+        Object.keys(USER_ACCOUNTS).forEach(k => {
+          if (USER_ACCOUNTS[k]) delete USER_ACCOUNTS[k].plainPassword;
+        });
       } else {
         USER_ACCOUNTS = JSON.parse(JSON.stringify(DEFAULT_USER_ACCOUNTS));
         saveUserAccountsToStorage();
@@ -2129,6 +2158,7 @@ async function initStorage() {
             USER_ACCOUNTS[roleKey].username = ca.username;
             USER_ACCOUNTS[roleKey].displayName = ca.display_name;
             USER_ACCOUNTS[roleKey].passwordHash = ca.password_hash;
+            delete USER_ACCOUNTS[roleKey].plainPassword;
           }
         });
         saveUserAccountsToStorage();
@@ -2171,6 +2201,27 @@ async function initStorage() {
         if (typeof renderCharts === "function") renderCharts();
         if (typeof renderRecordsTable === "function") renderRecordsTable();
       }
+    }, async () => {
+      // Realtime user account changed in Supabase cloud
+      if (typeof window.fetchCloudUserAccounts === "function") {
+        try {
+          const cloudAccounts = await window.fetchCloudUserAccounts();
+          if (Array.isArray(cloudAccounts) && cloudAccounts.length > 0) {
+            cloudAccounts.forEach(ca => {
+              const roleKey = (ca.role || "").toLowerCase();
+              if (USER_ACCOUNTS[roleKey]) {
+                USER_ACCOUNTS[roleKey].username = ca.username;
+                USER_ACCOUNTS[roleKey].displayName = ca.display_name;
+                USER_ACCOUNTS[roleKey].passwordHash = ca.password_hash;
+                delete USER_ACCOUNTS[roleKey].plainPassword;
+              }
+            });
+            saveUserAccountsToStorage();
+          }
+        } catch (e) {
+          console.warn("[Realtime] User sync warning:", e);
+        }
+      }
     });
   }
 }
@@ -2209,6 +2260,7 @@ window.triggerManualCloudSync = async function() {
               USER_ACCOUNTS[roleKey].username = ca.username;
               USER_ACCOUNTS[roleKey].displayName = ca.display_name;
               USER_ACCOUNTS[roleKey].passwordHash = ca.password_hash;
+              delete USER_ACCOUNTS[roleKey].plainPassword;
             }
           });
           saveUserAccountsToStorage();
