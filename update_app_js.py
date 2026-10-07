@@ -7123,12 +7123,100 @@ window.quickLoadTemplateImport2 = function() {
   }
 };
 
+/**
+ * Timezone-invariant Excel date parser that prevents the 1-day shift bug.
+ * Supports Excel serial numbers (e.g. 46025), Date objects (with IST/UTC offset drift correction),
+ * numeric serial strings, and standardized date strings.
+ */
+function parseAnyExcelDate(rawDate) {
+  if (rawDate === null || rawDate === undefined || rawDate === '') return '';
+
+  // 1. Numeric Excel serial date (e.g. 46025 for 2026-01-03)
+  if (typeof rawDate === 'number') {
+    if (typeof XLSX !== 'undefined' && XLSX.SSF && typeof XLSX.SSF.parse_date_code === 'function') {
+      const p = XLSX.SSF.parse_date_code(rawDate);
+      if (p && p.y && p.m && p.d) {
+        return `${p.y}-${String(p.m).padStart(2, '0')}-${String(p.d).padStart(2, '0')}`;
+      }
+    }
+    const utcDays = Math.round(rawDate - 25569);
+    const d = new Date(utcDays * 86400 * 1000);
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+  }
+
+  // 2. JavaScript Date instance
+  if (rawDate instanceof Date && !isNaN(rawDate.getTime())) {
+    let d = rawDate;
+    // Fix historical timezone offset drift where midnight lands at 23:59:xx of previous day (e.g. 23:59:50 in IST)
+    if (d.getHours() === 23 && d.getMinutes() >= 50) {
+      d = new Date(d.getTime() + 15 * 60 * 1000);
+    }
+    // If UTC midnight was parsed but local offset displays previous evening
+    if (d.getUTCHours() === 0 && d.getUTCMinutes() === 0 && d.getUTCSeconds() === 0 && d.getHours() !== 0) {
+      return d.toISOString().slice(0, 10);
+    }
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  // 3. String representation
+  let s = String(rawDate).trim();
+  if (!s) return '';
+
+  // Numeric serial in string form, e.g. "46025" or "46025.0"
+  if (/^\d{4,5}(\.\d+)?$/.test(s)) {
+    return parseAnyExcelDate(parseFloat(s));
+  }
+
+  // ISO timestamp with time: "2026-01-03T..." -> slice to "2026-01-03"
+  if (s.includes('T')) {
+    return s.split('T')[0];
+  }
+
+  // Normalize slashes, dots, and spaces to dashes
+  s = s.replace(/[\/\.]/g, '-');
+  const parts = s.split('-');
+  if (parts.length === 3) {
+    let p0 = parts[0].trim();
+    let p1 = parts[1].trim();
+    let p2 = parts[2].trim().split(' ')[0];
+
+    // Format: YYYY-MM-DD
+    if (p0.length === 4) {
+      return `${p0}-${p1.padStart(2, '0')}-${p2.padStart(2, '0')}`;
+    }
+    // Format: DD-MM-YYYY or MM-DD-YYYY (4-digit year at end)
+    if (p2.length === 4) {
+      return `${p2}-${p1.padStart(2, '0')}-${p0.padStart(2, '0')}`;
+    }
+    // Format: M/D/YY or D/M/YY (2-digit year at end, e.g. 1-3-26)
+    if (p2.length === 2 && p0.length <= 2) {
+      const yr = parseInt(p2, 10) < 50 ? '20' + p2 : '19' + p2;
+      return `${yr}-${p0.padStart(2, '0')}-${p1.padStart(2, '0')}`;
+    }
+  }
+
+  // Native Date fallback
+  const parsedNative = new Date(s);
+  if (!isNaN(parsedNative.getTime())) {
+    const y = parsedNative.getFullYear();
+    const m = String(parsedNative.getMonth() + 1).padStart(2, '0');
+    const day = String(parsedNative.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  return s.substring(0, 10);
+}
+window.parseAnyExcelDate = parseAnyExcelDate;
+
 function parseDowntimeExcelFile(file) {
   const reader = new FileReader();
   reader.onload = function(e) {
     try {
       const data = new Uint8Array(e.target.result);
-      const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+      const workbook = XLSX.read(data, { type: 'array', cellDates: false });
       
       // Auto-select best sheet (e.g. one with downtime/incident/log or first sheet)
       let targetSheetName = workbook.SheetNames[0];
@@ -7312,32 +7400,8 @@ function parseDowntimeExcelFile(file) {
           continue;
         }
 
-        // Format Date
-        let dateStr = "";
-        if (rawDate instanceof Date && !isNaN(rawDate)) {
-          const y = rawDate.getFullYear();
-          const m = String(rawDate.getMonth() + 1).padStart(2, "0");
-          const d = String(rawDate.getDate()).padStart(2, "0");
-          dateStr = `${y}-${m}-${d}`;
-        } else {
-          const s = String(rawDate).trim();
-          if (s.includes("/") || s.includes("-")) {
-            const parts = s.replace(/\\//g, "-").split("-");
-            if (parts.length === 3) {
-              if (parts[0].length === 4) {
-                dateStr = `${parts[0]}-${parts[1].padStart(2, "0")}-${parts[2].substring(0, 2).padStart(2, "0")}`;
-              } else if (parts[2].length >= 4) {
-                dateStr = `${parts[2].substring(0, 4)}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
-              } else {
-                dateStr = s.substring(0, 10);
-              }
-            } else {
-              dateStr = s.substring(0, 10);
-            }
-          } else {
-            dateStr = s.substring(0, 10);
-          }
-        }
+        // Format Date (Timezone invariant)
+        let dateStr = parseAnyExcelDate(rawDate);
 
         if (!dateStr || dateStr.length < 8) {
           skippedCount++;
@@ -7433,8 +7497,8 @@ function parseDowntimeExcelFile(file) {
         const rawStatus = (statusCol !== -1 && row[statusCol]) ? String(row[statusCol]).trim() : "Completed";
         const status = rawStatus.toUpperCase().includes("OPEN") ? "Open" : "Completed";
 
-        // Closed Date
-        let closedDate = (closedCol !== -1 && row[closedCol]) ? String(row[closedCol]).trim() : "";
+        // Closed Date (Timezone invariant)
+        let closedDate = (closedCol !== -1 && row[closedCol] !== undefined && row[closedCol] !== null) ? parseAnyExcelDate(row[closedCol]) : "";
         if (!closedDate && status === "Completed") {
           closedDate = dateStr;
         } else if (closedDate && status === "Completed" && closedDate < dateStr) {

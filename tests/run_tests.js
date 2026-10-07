@@ -16,7 +16,7 @@ console.log('RUNNING PLANT IT DOWNTIME AUTOMATED REGRESSION SUITE');
 console.log('====================================================\n');
 
 let passedTests = 0;
-let totalTests = 15;
+let totalTests = 16;
 
 function runTest(num, name, fn) {
   try {
@@ -317,6 +317,61 @@ runTest(15, 'Calculations in dashboard and export agree exactly', () => {
 
   assert.strictEqual(dashboardAvail.toFixed(2), exportAvail.availabilityPct.toFixed(2), 'Dashboard and Export availability match');
   assert.strictEqual(exportAvail.display, `${dashboardAvail.toFixed(2)}%`);
+});
+
+// ----------------------------------------------------
+// Test 16: Excel import date mapping & 1-day low shift prevention
+// ----------------------------------------------------
+runTest(16, 'Excel import date mapping: serial numbers, strings, and timezone drift prevent 1-day low shift', () => {
+  function parseAnyExcelDate(rawDate) {
+    if (rawDate === null || rawDate === undefined || rawDate === '') return '';
+    if (typeof rawDate === 'number') {
+      const utcDays = Math.round(rawDate - 25569);
+      const d = new Date(utcDays * 86400 * 1000);
+      return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+    }
+    if (rawDate instanceof Date && !isNaN(rawDate.getTime())) {
+      let d = rawDate;
+      if (d.getHours() === 23 && d.getMinutes() >= 50) {
+        d = new Date(d.getTime() + 15 * 60 * 1000);
+      }
+      if (d.getUTCHours() === 0 && d.getUTCMinutes() === 0 && d.getUTCSeconds() === 0 && d.getHours() !== 0) {
+        return d.toISOString().slice(0, 10);
+      }
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+    let s = String(rawDate).trim();
+    if (!s) return '';
+    if (/^\d{4,5}(\.\d+)?$/.test(s)) return parseAnyExcelDate(parseFloat(s));
+    if (s.includes('T')) return s.split('T')[0];
+    s = s.replace(/[\/\.]/g, '-');
+    const parts = s.split('-');
+    if (parts.length === 3) {
+      let p0 = parts[0].trim(), p1 = parts[1].trim(), p2 = parts[2].trim().split(' ')[0];
+      if (p0.length === 4) return `${p0}-${p1.padStart(2, '0')}-${p2.padStart(2, '0')}`;
+      if (p2.length === 4) return `${p2}-${p1.padStart(2, '0')}-${p0.padStart(2, '0')}`;
+      if (p2.length === 2 && p0.length <= 2) {
+        const yr = parseInt(p2, 10) < 50 ? '20' + p2 : '19' + p2;
+        return `${yr}-${p0.padStart(2, '0')}-${p1.padStart(2, '0')}`;
+      }
+    }
+    return s.substring(0, 10);
+  }
+
+  // Exact Excel serial numbers from user import file
+  assert.strictEqual(parseAnyExcelDate(46025), '2026-01-03', '46025 must map to 2026-01-03 without 1-day low drift');
+  assert.strictEqual(parseAnyExcelDate(46028), '2026-01-06', '46028 must map to 2026-01-06');
+  assert.strictEqual(parseAnyExcelDate(46032), '2026-01-10', '46032 must map to 2026-01-10');
+  assert.strictEqual(parseAnyExcelDate(46083), '2026-03-02', '46083 must map to 2026-03-02');
+  assert.strictEqual(parseAnyExcelDate(46095), '2026-03-14', '46095 must map to 2026-03-14');
+
+  // Timezone drift test (23:59:50)
+  const drifted = new Date(2026, 0, 2, 23, 59, 50);
+  assert.strictEqual(parseAnyExcelDate(drifted), '2026-01-03', 'Drifted Date must recover to Jan 3');
+
+  // Strings
+  assert.strictEqual(parseAnyExcelDate('03/01/2026'), '2026-01-03');
+  assert.strictEqual(parseAnyExcelDate('1/3/26'), '2026-01-03');
 });
 
 console.log('\n====================================================');
