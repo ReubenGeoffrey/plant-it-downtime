@@ -5807,8 +5807,27 @@ function initTechniciansDropdown() {
   }
 }
 
+function getLocalDateString(d = new Date()) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+window.getLocalDateString = getLocalDateString;
+
+function calcDateDiffDays(startDate, endDate) {
+  if (!startDate || !endDate) return 1;
+  const [y1, m1, d1] = startDate.split("-").map(Number);
+  const [y2, m2, d2] = endDate.split("-").map(Number);
+  const s = Date.UTC(y1, m1 - 1, d1);
+  const e = Date.UTC(y2, m2 - 1, d2);
+  const diff = Math.round((e - s) / (1000 * 60 * 60 * 24)) + 1;
+  return Math.max(1, diff);
+}
+window.calcDateDiffDays = calcDateDiffDays;
+
 function populateDefaultDates() {
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalDateString();
   const issueDateEl = document.getElementById("issueDate");
   const closedDateEl = document.getElementById("closedDate");
   
@@ -5915,7 +5934,7 @@ function initFormControls() {
       if (closedDateInput) {
         closedDateInput.disabled = false;
         if (!closedDateInput.value) {
-          closedDateInput.value = document.getElementById("issueDate")?.value || new Date().toISOString().split("T")[0];
+          closedDateInput.value = document.getElementById("issueDate")?.value || getLocalDateString();
         }
       }
     });
@@ -7827,7 +7846,7 @@ window.toggleRecordStatus = function(id) {
     showToast(`Marked ${id} as OPEN`, "warning");
   } else {
     rec.status = "Completed";
-    rec.closedDate = new Date().toISOString().split("T")[0];
+    rec.closedDate = getLocalDateString();
     showToast(`Marked ${id} as COMPLETED`, "success");
   }
 
@@ -7963,10 +7982,7 @@ function getElapsedDaysInMonth(year, month, records = null) {
 
 function getDashboardPeriodDays() {
   if (dashboardDateFilter.startDate && dashboardDateFilter.endDate) {
-    const s = new Date(dashboardDateFilter.startDate);
-    const e = new Date(dashboardDateFilter.endDate);
-    const diff = Math.round((e - s) / (1000 * 60 * 60 * 24)) + 1;
-    return Math.max(1, diff);
+    return calcDateDiffDays(dashboardDateFilter.startDate, dashboardDateFilter.endDate);
   }
   if (dashboardDateFilter.month !== "ALL") {
     const [y, m] = dashboardDateFilter.month.split("-").map(Number);
@@ -9779,22 +9795,28 @@ function computeAreaUptimeSummary(records, periodDays) {
   const areaOpMins = days * 24 * 60;
   const areaOpHours = parseFloat((areaOpMins / 60).toFixed(1));
 
+  const hasData = records && records.length > 0;
+
   return standardAreas.map((area, idx) => {
     const aRecs = records.filter(r => r.area === area);
     const dtMins = aRecs.reduce((acc, r) => acc + (parseInt(r.downtimeMinutes, 10) || 0), 0);
     const dtHours = parseFloat((dtMins / 60).toFixed(2));
     const upMins = Math.max(0, areaOpMins - dtMins);
     const upHours = parseFloat((upMins / 60).toFixed(1));
-    const avail = Math.min(100, Math.max(0, (upMins / areaOpMins) * 100));
-    const availPct = parseFloat(avail.toFixed(2));
+    const avail = hasData ? Math.min(100, Math.max(0, (upMins / areaOpMins) * 100)) : null;
+    const availPct = hasData ? parseFloat(avail.toFixed(2)) : null;
     const targetPct = 99.00;
-    const variance = parseFloat((availPct - targetPct).toFixed(2));
+    const variance = hasData ? parseFloat((availPct - targetPct).toFixed(2)) : null;
     const incidents = aRecs.length;
-    const mttr = incidents > 0 ? parseFloat((dtMins / incidents).toFixed(1)) : 0.0;
+    const mttr = (hasData && incidents > 0) ? parseFloat((dtMins / incidents).toFixed(1)) : (hasData ? 0.0 : "N/A");
     let status = "≥99%";
     let statusColor = "FF065F46";
     let statusBg = "FFD1FAE5";
-    if (availPct < 95.0) {
+    if (!hasData) {
+      status = "No Data";
+      statusColor = "FF64748B";
+      statusBg = "FFF1F5F9";
+    } else if (availPct < 95.0) {
       status = "Critical (<95%)";
       statusColor = "FF991B1B";
       statusBg = "FFFEE2E2";
@@ -9854,16 +9876,21 @@ function computeProcessUptimeSummary(records, periodDays) {
     const dtHours = parseFloat((dtMins / 60).toFixed(2));
     const upMins = Math.max(0, procOpMins - dtMins);
     const upHours = parseFloat((upMins / 60).toFixed(1));
-    const avail = Math.min(100, Math.max(0, (upMins / procOpMins) * 100));
-    const availPct = parseFloat(avail.toFixed(2));
+    const hasData = records && records.length > 0;
+    const avail = hasData ? Math.min(100, Math.max(0, (upMins / procOpMins) * 100)) : null;
+    const availPct = hasData ? parseFloat(avail.toFixed(2)) : null;
     const incidents = pRecs.length;
-    const mttr = incidents > 0 ? parseFloat((dtMins / incidents).toFixed(1)) : 0.0;
+    const mttr = (hasData && incidents > 0) ? parseFloat((dtMins / incidents).toFixed(1)) : (hasData ? 0.0 : "N/A");
     const primaryArea = procAreaMap[proc] || (pRecs.length > 0 ? pRecs[0].area : "General Plant");
 
     let status = "≥99%";
     let statusColor = "FF065F46";
     let statusBg = "FFD1FAE5";
-    if (availPct < 95.0) {
+    if (!hasData) {
+      status = "No Data";
+      statusColor = "FF64748B";
+      statusBg = "FFF1F5F9";
+    } else if (availPct < 95.0) {
       status = "Critical (<95%)";
       statusColor = "FF991B1B";
       statusBg = "FFFEE2E2";
@@ -9967,9 +9994,7 @@ function resolveExportRecords(customOptions = null) {
     } else if (customOptions.startDate && customOptions.endDate) {
       startDate = customOptions.startDate;
       endDate = customOptions.endDate;
-      const s = new Date(startDate);
-      const e = new Date(endDate);
-      periodDays = Math.max(1, Math.round((e - s) / (1000 * 60 * 60 * 24)) + 1);
+      periodDays = calcDateDiffDays(startDate, endDate);
       periodLabel = `${startDate} to ${endDate} (${periodDays} Days)`;
       fileSuffix = `${startDate}_to_${endDate}`;
       records = records.filter(r => r.issueDate && r.issueDate >= startDate && r.issueDate <= endDate);
@@ -9985,9 +10010,7 @@ function resolveExportRecords(customOptions = null) {
     if (currentFilter.dateFrom && currentFilter.dateTo) {
       startDate = currentFilter.dateFrom;
       endDate = currentFilter.dateTo;
-      const s = new Date(startDate);
-      const e = new Date(endDate);
-      periodDays = Math.max(1, Math.round((e - s) / (1000 * 60 * 60 * 24)) + 1);
+      periodDays = calcDateDiffDays(startDate, endDate);
       periodLabel = `${startDate} to ${endDate} (${periodDays} Days)`;
       fileSuffix = `${startDate}_to_${endDate}`;
       records = records.filter(r => r.issueDate && r.issueDate >= startDate && r.issueDate <= endDate);
@@ -10012,9 +10035,7 @@ function resolveExportRecords(customOptions = null) {
     } else if (dashboardDateFilter.startDate && dashboardDateFilter.endDate) {
       startDate = dashboardDateFilter.startDate;
       endDate = dashboardDateFilter.endDate;
-      const s = new Date(startDate);
-      const e = new Date(endDate);
-      periodDays = Math.max(1, Math.round((e - s) / (1000 * 60 * 60 * 24)) + 1);
+      periodDays = calcDateDiffDays(startDate, endDate);
       periodLabel = `${startDate} to ${endDate} (${periodDays} Days)`;
       fileSuffix = `${startDate}_to_${endDate}`;
       records = records.filter(r => r.issueDate && r.issueDate >= startDate && r.issueDate <= endDate);
@@ -11581,7 +11602,7 @@ Uptime Matrix (1440 Mins & %)`;
 
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-      const filename = `Plant_IT_Downtime_${fileSuffix}_${new Date().toISOString().split("T")[0]}.xlsx`;
+      const filename = `Plant_IT_Downtime_${fileSuffix}_${getLocalDateString()}.xlsx`;
       saveAs(blob, filename);
 
       const toastMsg = isAllMonths
@@ -11884,7 +11905,7 @@ function exportToExcelSheetJSFallback(records = null, fileSuffix = "Records", cu
     });
   }
 
-  const filename = `Plant_IT_Downtime_${fileSuffix}_${new Date().toISOString().split("T")[0]}.xlsx`;
+  const filename = `Plant_IT_Downtime_${fileSuffix}_${getLocalDateString()}.xlsx`;
   XLSX.writeFile(workbook, filename);
   showToast(`Multi-Sheet Excel (.xlsx) downloaded successfully!`, "success");
 }
@@ -11960,7 +11981,7 @@ window.exportToCSV = function(customOptions = null) {
   const encodedUri = encodeURI(csvContent);
   const link = document.createElement("a");
   link.setAttribute("href", encodedUri);
-  link.setAttribute("download", `Plant_IT_Downtime_${fileSuffix}_${new Date().toISOString().split("T")[0]}.csv`);
+  link.setAttribute("download", `Plant_IT_Downtime_${fileSuffix}_${getLocalDateString()}.csv`);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
