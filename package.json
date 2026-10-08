@@ -8,6 +8,7 @@
     "test": "node tests/run_tests.js",
     "test:acceptance": "node tests/run_acceptance_tests.js",
     "test:verify": "node tests/verify_18_regressions.js",
+    "test:user5": "node tests/verify_user_5_requests.js",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"

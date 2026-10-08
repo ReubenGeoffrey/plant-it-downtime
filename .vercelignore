@@ -1,0 +1,7 @@
+Yokohama-MES.exe
+src-tauri
+tests
+*.bat
+*.cs
+*.py
+*.tsv
