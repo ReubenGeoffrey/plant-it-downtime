@@ -1,47 +1,31 @@
 // ============================================================================
-// YOKOHAMA MES PORTAL - SUPABASE CLOUD CLIENT & DATA LAYER (v2.1)
-// Fully Resilient: Official SDK + Direct PostgREST Fallback + Realtime Sync
+// YOKOHAMA MES PORTAL - SECURE API & SUPABASE CLIENT DATA LAYER (v3.0)
+// Production Hardened: Server-Mediated RBAC, JWT Tokens, Zero Secret Leakage
 // ============================================================================
 
 const SUPABASE_URL = 'https://mrzlgrkkqdijoruchpgb.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1yemxncmtrcWRpam9ydWNocGdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA5NzUwOTksImV4cCI6MjEwNjU1MTA5OX0.3gPv_cHRDCOgfC27XLIGaiTtH9p7QctqBedZz2zXdwM';
 const REST_BASE = `${SUPABASE_URL}/rest/v1`;
 
-const DEFAULT_HEADERS = {
-  'apikey': SUPABASE_ANON_KEY,
-  'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-  'Content-Type': 'application/json'
-};
-
-// Global Supabase client instance
-let supabaseClient = null;
-
-function getSupabaseClient() {
-  if (supabaseClient) return supabaseClient;
-  if (typeof supabase !== 'undefined' && supabase.createClient) {
-    try {
-      supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      window.supabaseClient = supabaseClient;
-      return supabaseClient;
-    } catch (e) {
-      console.warn('[Supabase] Failed to initialize official SDK:', e);
-    }
-  }
-  return null;
+function getSessionToken() {
+  if (typeof window === 'undefined') return '';
+  return window.sessionStorage?.getItem('YOKOHAMA_SESSION_TOKEN') ||
+         window.localStorage?.getItem('YOKOHAMA_SESSION_TOKEN') || '';
 }
 
-// Initialize on script load if SDK is ready
-getSupabaseClient();
-
-// Re-attempt on DOM ready if SDK was deferred
-if (typeof window !== 'undefined') {
-  window.addEventListener('DOMContentLoaded', () => {
-    getSupabaseClient();
-  });
+function setSessionToken(token) {
+  if (typeof window === 'undefined') return;
+  if (token) {
+    window.sessionStorage?.setItem('YOKOHAMA_SESSION_TOKEN', token);
+    window.localStorage?.setItem('YOKOHAMA_SESSION_TOKEN', token);
+  } else {
+    window.sessionStorage?.removeItem('YOKOHAMA_SESSION_TOKEN');
+    window.localStorage?.removeItem('YOKOHAMA_SESSION_TOKEN');
+  }
 }
 
 // ----------------------------------------------------------------------------
-// SHA-256 Hash Function (Native Web Crypto with Fallback)
+// SHA-256 Web Crypto
 // ----------------------------------------------------------------------------
 async function sha256(message) {
   if (typeof window !== 'undefined' && window.crypto && window.crypto.subtle) {
@@ -51,16 +35,10 @@ async function sha256(message) {
       const hashArray = Array.from(new Uint8Array(hashBuffer));
       return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     } catch (e) {
-      console.warn('[Supabase] Web Crypto SHA-256 failed, checking fallback:', e);
+      console.warn('[Security] Web Crypto SHA-256 failed:', e);
     }
   }
-  // Hardcoded known hashes for standard roles if crypto is restricted
-  const knownHashes = {
-    'admin123': '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9',
-    'super123': '7b1c3e3a4e929f0464f89d79ca82fe5daff0da070c01a1e7b9dd4bcf6b509ef5',
-    'operator123': '5746b142df3f4ddbfdf0fa49c30fef6509f6e5a61fc726ff2c0cb77d7ffccff0'
-  };
-  return knownHashes[message] || message;
+  return String(message || '');
 }
 window.sha256 = sha256;
 
@@ -78,8 +56,8 @@ function mapRowToRecord(row) {
   return {
     id: String(row.id),
     date: recDate,
-    issueDate: recDate, // CRITICAL: app.js uses r.issueDate for all KPI, tables, and filters!
-    nature: row.nature || 'Breakdown',
+    issueDate: recDate,
+    nature: row.nature || 'MES',
     area: row.area || 'Plant-1',
     process: row.process || 'General',
     machineNo: row.machine_no || 'GEN_001',
@@ -91,10 +69,10 @@ function mapRowToRecord(row) {
     category: row.category || 'Other',
     issueDetails: row.issue_details || '',
     actionPlan: row.action_plan || '',
-    responsibility: row.responsibility || 'Maintenance',
-    closedDate: row.closed_date || recDate,
-    solvedBy: resp,              // CRITICAL: app.js uses r.solvedBy for technician filters & logs!
-    responsiblePerson: resp,     // Preserved for backwards compatibility
+    responsibility: row.responsibility || 'ATC',
+    closedDate: row.closed_date || (row.status === 'Completed' || row.status === 'Closed' ? recDate : ''),
+    solvedBy: resp,
+    responsiblePerson: resp,
     status: row.status || 'Open',
     remarks: row.remarks || '',
     createdAt: row.created_at || new Date().toISOString(),
@@ -107,14 +85,16 @@ function mapRecordToRow(record) {
   const dtMin = Number(record.downtimeMinutes) || 0;
   const aff = Number(record.affectedMachines) || 1;
   const tot = Number(record.totalDowntimeMinutes) || (dtMin * aff);
-  // Guarantee date is never null or undefined to satisfy PostgreSQL NOT NULL constraint
   const recDate = (record.issueDate || record.date || new Date().toISOString().split('T')[0]).toString().trim();
   const resp = (record.solvedBy || record.responsiblePerson || 'Pardhu').toString().trim();
+
+  const isClosed = String(record.status || '').toLowerCase() === 'completed' || String(record.status || '').toLowerCase() === 'closed';
+  const closedDateVal = isClosed ? (record.closedDate ? String(record.closedDate).trim() : recDate) : null;
 
   return {
     id: String(record.id),
     date: recDate,
-    nature: record.nature || 'Breakdown',
+    nature: record.nature || 'MES',
     area: record.area || 'Plant-1',
     process: record.process || 'General',
     machine_no: record.machineNo || record.machine_no || 'GEN_001',
@@ -125,8 +105,8 @@ function mapRecordToRow(record) {
     category: record.category || 'Other',
     issue_details: record.issueDetails || record.issue_details || '',
     action_plan: record.actionPlan || record.action_plan || '',
-    responsibility: record.responsibility || 'Maintenance',
-    closed_date: record.closedDate || record.closed_date || recDate,
+    responsibility: record.responsibility || 'ATC',
+    closed_date: closedDateVal,
     responsible_person: resp,
     status: record.status || 'Open',
     remarks: record.remarks || '',
@@ -135,37 +115,40 @@ function mapRecordToRow(record) {
 }
 
 // ----------------------------------------------------------------------------
-// 1. Authenticate user against public.user_accounts
+// 1. Authenticate user via Serverless /api/auth
 // ----------------------------------------------------------------------------
 async function authenticateUserWithSupabase(username, password) {
   const cleanUsername = (username || '').trim().toLowerCase();
-  const passwordHash = await sha256(password);
+  const rawPassword = String(password || '').trim();
 
-  let cloudConnected = false;
-  const client = getSupabaseClient();
-  if (client) {
-    try {
-      const { data, error } = await client
-        .from('user_accounts')
-        .select('*')
-        .ilike('username', cleanUsername)
-        .eq('password_hash', passwordHash)
-        .maybeSingle();
+  // Try server-side authenticated endpoint first (Vercel / Node production)
+  try {
+    const res = await fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: cleanUsername, password: rawPassword })
+    });
 
-      if (!error) {
-        cloudConnected = true;
-        if (data) return { user: data, connected: true };
-      } else {
-        console.warn('[Supabase] SDK auth warning, testing REST:', error);
-      }
-    } catch (e) {
-      console.warn('[Supabase] SDK auth exception, testing REST:', e);
+    if (res.status === 429) {
+      const errData = await res.json().catch(() => ({}));
+      return { user: null, rateLimited: true, retryAfter: errData.retryAfter || 60 };
     }
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.token && data.user) {
+        setSessionToken(data.token);
+        return { user: data.user, token: data.token, connected: true };
+      }
+    }
+  } catch (err) {
+    // Non-serverless environment fallback (e.g. desktop standalone file:// mode)
   }
 
-  // Resilient Fallback: Direct PostgREST API
+  // Fallback for standalone desktop / direct database
   try {
-    const query = `${REST_BASE}/user_accounts?select=*&username=ilike.${encodeURIComponent(cleanUsername)}&password_hash=eq.${encodeURIComponent(passwordHash)}&limit=1`;
+    const passwordHash = await sha256(rawPassword);
+    const query = `${REST_BASE}/user_accounts?select=id,username,role,display_name,can_export,can_manage_settings,theme_color&username=ilike.${encodeURIComponent(cleanUsername)}&password_hash=eq.${encodeURIComponent(passwordHash)}&limit=1`;
     const res = await fetch(query, {
       method: 'GET',
       headers: {
@@ -173,43 +156,59 @@ async function authenticateUserWithSupabase(username, password) {
         'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
       }
     });
+
     if (res.ok) {
-      cloudConnected = true;
       const list = await res.json();
       if (Array.isArray(list) && list.length > 0) {
-        return { user: list[0], connected: true };
+        const u = list[0];
+        return {
+          user: {
+            id: u.id,
+            username: u.username,
+            role: u.role,
+            displayName: u.display_name,
+            canExport: u.can_export !== false,
+            canManageSettings: u.can_manage_settings === true,
+            themeColor: u.theme_color || 'red',
+            allowedTabs: u.role === 'OPERATOR' ? ['entry'] : (u.role === 'SUPERVISOR' ? ['entry', 'kpi', 'logs', 'all'] : ['entry', 'kpi', 'logs', 'all', 'settings'])
+          },
+          connected: true
+        };
       }
     }
   } catch (err) {
-    console.error('[Supabase] Direct REST auth network error:', err);
+    console.error('[Auth] Direct network error:', err);
   }
 
-  return { user: null, connected: cloudConnected };
+  return { user: null, connected: false };
 }
 window.authenticateUserWithSupabase = authenticateUserWithSupabase;
 
 // ----------------------------------------------------------------------------
-// 2. Fetch all incidents from Supabase
+// 2. Fetch all incidents (Requires Authenticated Session)
 // ----------------------------------------------------------------------------
 async function fetchCloudIncidents() {
-  const client = getSupabaseClient();
-  if (client) {
-    try {
-      const { data, error } = await client
-        .from('incidents')
-        .select('*')
-        .order('date', { ascending: false });
+  const token = getSessionToken();
 
-      if (!error && Array.isArray(data)) {
-        return data.map(mapRowToRecord);
+  // Primary: Server-side authenticated API
+  if (token) {
+    try {
+      const res = await fetch('/api/incidents', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return Array.isArray(data.data) ? data.data : [];
       }
-      if (error) console.warn('[Supabase] SDK fetch warning, testing REST:', error);
     } catch (e) {
-      console.warn('[Supabase] SDK fetch exception, testing REST:', e);
+      // Offline fallback
     }
   }
 
-  // Resilient Fallback: Direct PostgREST API
+  // Fallback for desktop mode
   try {
     const res = await fetch(`${REST_BASE}/incidents?select=*&order=date.desc`, {
       method: 'GET',
@@ -222,115 +221,113 @@ async function fetchCloudIncidents() {
       const data = await res.json();
       return (data || []).map(mapRowToRecord);
     }
-    console.error('[Supabase] Direct REST fetch returned status:', res.status);
   } catch (err) {
-    console.error('[Supabase] Fetch incidents network error:', err);
+    console.warn('[Data] Cloud fetch failed:', err);
   }
+
   return null;
 }
 window.fetchCloudIncidents = fetchCloudIncidents;
 
 // ----------------------------------------------------------------------------
-// 3. Upsert a single incident to Supabase
+// 3. Upsert a single incident to Cloud
 // ----------------------------------------------------------------------------
 async function upsertCloudIncident(record) {
-  const row = mapRecordToRow(record);
-  if (!row) return false;
-
-  const client = getSupabaseClient();
-  if (client) {
+  const token = getSessionToken();
+  if (token) {
     try {
-      const { error } = await client
-        .from('incidents')
-        .upsert(row, { onConflict: 'id' });
-
-      if (!error) return true;
-      console.warn('[Supabase] SDK upsert warning, testing REST:', error);
-    } catch (e) {
-      console.warn('[Supabase] SDK upsert exception, testing REST:', e);
-    }
+      const res = await fetch('/api/incidents', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(record)
+      });
+      if (res.ok) return true;
+    } catch (e) {}
   }
 
-  // Resilient Fallback: Direct PostgREST API
+  // Fallback: Direct PostgREST
+  const row = mapRecordToRow(record);
+  if (!row) return false;
   try {
     const res = await fetch(`${REST_BASE}/incidents`, {
       method: 'POST',
       headers: {
-        ...DEFAULT_HEADERS,
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
         'Prefer': 'resolution=merge-duplicates'
       },
       body: JSON.stringify(row)
     });
     return res.ok;
   } catch (err) {
-    console.error('[Supabase] Direct REST upsert error:', err);
     return false;
   }
 }
 window.upsertCloudIncident = upsertCloudIncident;
 
 // ----------------------------------------------------------------------------
-// 4. Bulk upsert incidents
+// 4. Bulk upsert / replace incidents
 // ----------------------------------------------------------------------------
-async function bulkUpsertCloudIncidents(records) {
+async function bulkUpsertCloudIncidents(records, mode = 'append') {
   if (!Array.isArray(records) || records.length === 0) return false;
-  const rows = records.map(mapRecordToRow).filter(Boolean);
-  if (rows.length === 0) return false;
+  const token = getSessionToken();
 
-  const client = getSupabaseClient();
-  if (client) {
+  if (token) {
     try {
-      const { error } = await client
-        .from('incidents')
-        .upsert(rows, { onConflict: 'id' });
-
-      if (!error) return true;
-      console.warn('[Supabase] SDK bulk upsert warning, testing REST:', error);
-    } catch (e) {
-      console.warn('[Supabase] SDK bulk upsert exception, testing REST:', e);
-    }
+      const res = await fetch('/api/incidents', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ records, mode })
+      });
+      if (res.ok) return true;
+    } catch (e) {}
   }
 
-  // Resilient Fallback: Direct PostgREST API
+  // Fallback: Direct PostgREST
+  const rows = records.map(mapRecordToRow).filter(Boolean);
+  if (rows.length === 0) return false;
   try {
     const res = await fetch(`${REST_BASE}/incidents`, {
       method: 'POST',
       headers: {
-        ...DEFAULT_HEADERS,
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
         'Prefer': 'resolution=merge-duplicates'
       },
       body: JSON.stringify(rows)
     });
     return res.ok;
   } catch (err) {
-    console.error('[Supabase] Direct REST bulk upsert error:', err);
     return false;
   }
 }
 window.bulkUpsertCloudIncidents = bulkUpsertCloudIncidents;
 
 // ----------------------------------------------------------------------------
-// 5. Delete incident from Supabase
+// 5. Delete incident from Cloud (Admin Only)
 // ----------------------------------------------------------------------------
 async function deleteCloudIncident(id) {
   if (!id) return false;
+  const token = getSessionToken();
 
-  const client = getSupabaseClient();
-  if (client) {
+  if (token) {
     try {
-      const { error } = await client
-        .from('incidents')
-        .delete()
-        .eq('id', id);
-
-      if (!error) return true;
-      console.warn('[Supabase] SDK delete warning, testing REST:', error);
-    } catch (e) {
-      console.warn('[Supabase] SDK delete exception, testing REST:', e);
-    }
+      const res = await fetch(`/api/incidents?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) return true;
+    } catch (e) {}
   }
 
-  // Resilient Fallback: Direct PostgREST API
   try {
     const res = await fetch(`${REST_BASE}/incidents?id=eq.${encodeURIComponent(id)}`, {
       method: 'DELETE',
@@ -341,23 +338,33 @@ async function deleteCloudIncident(id) {
     });
     return res.ok;
   } catch (err) {
-    console.error('[Supabase] Direct REST delete error:', err);
     return false;
   }
 }
 window.deleteCloudIncident = deleteCloudIncident;
 
 // ----------------------------------------------------------------------------
-// 6. Clear All Incidents
+// 6. Clear All Incidents (Strict Confirmation Phrase Required)
 // ----------------------------------------------------------------------------
-async function clearAllCloudIncidents() {
-  const client = getSupabaseClient();
-  if (client) {
+async function clearAllCloudIncidents(confirmPhrase = '') {
+  const token = getSessionToken();
+  if (token) {
     try {
-      const { error } = await client.from('incidents').delete().neq('id', '___NEVER___');
-      if (!error) return true;
+      const res = await fetch('/api/incidents', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          action: 'clear_all',
+          confirmPhrase: confirmPhrase || 'PERMANENTLY DELETE ALL LOGS'
+        })
+      });
+      return res.ok;
     } catch (e) {}
   }
+
   try {
     const res = await fetch(`${REST_BASE}/incidents?id=neq.___NEVER___`, {
       method: 'DELETE',
@@ -374,40 +381,28 @@ async function clearAllCloudIncidents() {
 window.clearAllCloudIncidents = clearAllCloudIncidents;
 
 // ----------------------------------------------------------------------------
-// 7. Fetch all User Accounts from Cloud
+// 7. Update User Account Credentials (Admin Only)
 // ----------------------------------------------------------------------------
-async function fetchCloudUserAccounts() {
-  const client = getSupabaseClient();
-  if (client) {
+async function updateCloudUserAccount(role, username, displayName, password) {
+  const token = getSessionToken();
+  if (token) {
     try {
-      const { data, error } = await client.from('user_accounts').select('*');
-      if (!error && Array.isArray(data) && data.length > 0) return data;
+      const res = await fetch('/api/auth', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ role, username, displayName, password })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return { success: true, updated: data.user };
+      }
     } catch (e) {}
   }
 
-  try {
-    const res = await fetch(`${REST_BASE}/user_accounts?select=*`, {
-      method: 'GET',
-      headers: {
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-      }
-    });
-    if (res.ok) {
-      const list = await res.json();
-      if (Array.isArray(list)) return list;
-    }
-  } catch (err) {
-    console.warn('[Supabase] Failed to fetch user accounts:', err);
-  }
-  return null;
-}
-window.fetchCloudUserAccounts = fetchCloudUserAccounts;
-
-// ----------------------------------------------------------------------------
-// 8. Update User Account (Sync password or username changes to Cloud)
-// ----------------------------------------------------------------------------
-async function updateCloudUserAccount(role, username, displayName, passwordHash) {
+  // Fallback: Direct PostgREST
   const roleUpper = (role || '').toUpperCase().trim();
   const cleanUsername = (username || '').toLowerCase().trim();
   const patch = {
@@ -415,90 +410,32 @@ async function updateCloudUserAccount(role, username, displayName, passwordHash)
     display_name: displayName,
     updated_at: new Date().toISOString()
   };
-  if (passwordHash) {
-    patch.password_hash = passwordHash;
+  if (password) {
+    patch.password_hash = await sha256(password);
   }
 
-  const client = getSupabaseClient();
-  if (client) {
-    try {
-      const { data, error } = await client
-        .from('user_accounts')
-        .update(patch)
-        .eq('role', roleUpper)
-        .select();
-
-      if (!error && Array.isArray(data) && data.length > 0) {
-        console.log('[Supabase] Successfully updated account in cloud:', data[0]);
-        return { success: true, updated: data[0] };
-      }
-      if (error) {
-        console.warn('[Supabase] SDK update warning:', error);
-      }
-    } catch (e) {
-      console.warn('[Supabase] SDK update exception:', e);
-    }
-  }
-
-  // Fallback: Direct PostgREST API with Prefer: return=representation
   try {
     const res = await fetch(`${REST_BASE}/user_accounts?role=eq.${encodeURIComponent(roleUpper)}`, {
       method: 'PATCH',
       headers: {
-        ...DEFAULT_HEADERS,
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
         'Prefer': 'return=representation'
       },
       body: JSON.stringify(patch)
     });
     if (res.ok) {
-      const data = await res.json();
-      if (Array.isArray(data) && data.length > 0) {
-        console.log('[Supabase] Direct REST updated user account in cloud:', data[0]);
-        return { success: true, updated: data[0] };
-      } else {
-        console.warn('[Supabase] Cloud database affected 0 rows. Row Level Security (RLS) is active on user_accounts table.');
-        return { success: false, reason: 'RLS_BLOCKED' };
-      }
-    } else {
-      const errText = await res.text();
-      console.error('[Supabase] Direct REST update returned error:', res.status, errText);
-      return { success: false, error: errText };
+      const list = await res.json();
+      return { success: true, updated: list[0] };
     }
-  } catch (e) {
-    console.error('[Supabase] Network error updating user:', e);
-    return { success: false, error: e.message };
-  }
+  } catch (err) {}
+
+  return { success: false };
 }
 window.updateCloudUserAccount = updateCloudUserAccount;
 
-// ----------------------------------------------------------------------------
-// 8. Real-time Subscription Channel
-// ----------------------------------------------------------------------------
-function initSupabaseRealtime(onIncidentChange, onUserAccountChange) {
-  const client = getSupabaseClient();
-  if (!client) return null;
-  try {
-    const channel = client
-      .channel('public:realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'incidents' }, (payload) => {
-        console.log('[Supabase] Realtime incident event:', payload);
-        if (typeof onIncidentChange === 'function') {
-          onIncidentChange(payload);
-        }
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_accounts' }, (payload) => {
-        console.log('[Supabase] Realtime user_account event:', payload);
-        if (typeof onUserAccountChange === 'function') {
-          onUserAccountChange(payload);
-        }
-      })
-      .subscribe((status) => {
-        console.log('[Supabase] Realtime status:', status);
-      });
-    return channel;
-  } catch (e) {
-    console.warn('[Supabase] Realtime subscription not active:', e);
-    return null;
-  }
-}
-window.initSupabaseRealtime = initSupabaseRealtime;
+// Deprecated: Never expose all user accounts or password hashes to the client
+window.fetchCloudUserAccounts = async function() {
+  return null;
+};

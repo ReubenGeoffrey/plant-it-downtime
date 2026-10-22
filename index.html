@@ -81,6 +81,12 @@
           </div>
           <div>
             <h1 class="text-xs sm:text-sm font-bold text-slate-200 tracking-wide uppercase">PLANT IT DOWNTIME MANAGEMENT PORTAL</h1>
+            <div class="hidden md:flex items-center gap-1.5 mt-0.5">
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/[0.05] border border-white/[0.12] backdrop-blur-md text-[10px] text-slate-400 shadow-xs">
+                <span class="w-1.5 h-1.5 rounded-full bg-[#E60012] animate-pulse"></span>
+                <span>Build by <strong class="text-slate-200 font-bold">Hadssha Bell S</strong> &amp; <strong class="text-slate-200 font-bold">Reuben Geoffrey</strong></span>
+              </span>
+            </div>
           </div>
         </div>
 
@@ -146,6 +152,18 @@
             <i class="fa-solid fa-right-to-bracket"></i>
             <span>Sign In to Portal</span>
           </button>
+        </div>
+
+        <!-- Glassy Attribution Badge -->
+        <div class="pt-3 mt-1 border-t border-slate-100 flex items-center justify-center">
+          <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/[0.04] hover:bg-slate-900/[0.07] border border-slate-200/80 backdrop-blur-md shadow-xs transition-all">
+            <div class="flex items-center justify-center w-5 h-5 rounded-full bg-gradient-to-tr from-[#E60012]/20 to-red-500/10 border border-red-500/25 text-[#E60012]">
+              <i class="fa-solid fa-code text-[9px]"></i>
+            </div>
+            <span class="text-[10.5px] font-medium text-slate-500">
+              Build by <strong class="text-slate-800 font-bold">Hadssha Bell S</strong> &amp; <strong class="text-slate-800 font-bold">Reuben Geoffrey</strong>
+            </span>
+          </div>
         </div>
 
 
@@ -1921,14 +1939,31 @@
   <!-- Footer -->
   <footer class="bg-[#0F1115] text-slate-400 text-xs py-6 border-t border-slate-800 mt-12 no-print">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-      <div>
-        <span class="font-bold text-slate-300">Plant IT Downtime Management Portal</span>
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-red-600/20 border border-red-500/30 flex items-center justify-center text-[#E60012] shadow-xs">
+          <i class="fa-solid fa-industry text-sm"></i>
+        </div>
+        <div>
+          <span class="font-bold text-slate-200">Plant IT Downtime Management Portal</span>
+          <span class="text-slate-500 text-[11px] ml-2 hidden sm:inline">&bull; Yokohama Tire Operations</span>
+        </div>
+      </div>
+
+      <!-- Glassy Badge: Build by Hadssha Bell S & Reuben Geoffrey -->
+      <div class="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.15] hover:border-red-500/40 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.2)] transition-all duration-300 group">
+        <div class="relative flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-tr from-[#E60012]/50 via-red-500/30 to-white/20 border border-white/35 shadow-[inset_0_1px_2px_rgba(255,255,255,0.5),0_2px_8px_rgba(230,0,18,0.4)]">
+          <i class="fa-solid fa-code text-[#FF4D5E] text-[10px] group-hover:scale-110 transition-transform"></i>
+          <span class="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+        </div>
+        <span class="text-[11px] font-medium text-slate-300 tracking-wide">
+          Build by <span class="text-white font-extrabold tracking-normal">Hadssha Bell S</span> &amp; <span class="text-white font-extrabold tracking-normal">Reuben Geoffrey</span>
+        </span>
       </div>
     </div>
   </footer>
 
   <!-- Application Logic -->
-  <script src="app.js?v=5.2"></script>
+  <script src="app.js?v=5.3"></script>
 
   <!-- =========================================================================
        MODAL: EXPORT REPORT BY DATE OR MONTH (EXECUTIVE EXCEL & CSV)

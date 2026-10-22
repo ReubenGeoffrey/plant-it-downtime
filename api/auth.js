@@ -4,7 +4,10 @@ const {
   setCorsHeaders,
   sha256,
   generateToken,
-  requireAuth
+  requireAuth,
+  checkRateLimit,
+  recordFailedLogin,
+  clearRateLimit
 } = require('./utils');
 
 module.exports = async function handler(req, res) {
@@ -13,7 +16,9 @@ module.exports = async function handler(req, res) {
     return res.status(200).end();
   }
 
-  // 1. POST /api/auth (Login)
+  const clientIp = (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '127.0.0.1').split(',')[0].trim();
+
+  // 1. POST /api/auth (Login with Rate Limiting)
   if (req.method === 'POST') {
     try {
       const { username, password } = req.body || {};
@@ -24,9 +29,20 @@ module.exports = async function handler(req, res) {
         return res.status(400).json({ error: 'Username and password are required' });
       }
 
+      // Check rate limit by IP and username
+      const rateLimitKey = `${clientIp}:${cleanUser}`;
+      const rateCheck = checkRateLimit(rateLimitKey, 5, 60000);
+      if (!rateCheck.allowed) {
+        res.setHeader('Retry-After', String(rateCheck.retryAfter || 60));
+        return res.status(429).json({
+          error: `Too many login attempts. Please wait ${rateCheck.retryAfter} seconds before trying again.`,
+          retryAfter: rateCheck.retryAfter
+        });
+      }
+
       const pHash = sha256(rawPassword);
 
-      // Authenticate directly against Supabase
+      // Authenticate directly against Supabase user_accounts table
       const queryUrl = `${SUPABASE_URL}/rest/v1/user_accounts?select=*&username=ilike.${encodeURIComponent(cleanUser)}&password_hash=eq.${encodeURIComponent(pHash)}&limit=1`;
       const sRes = await fetch(queryUrl, {
         method: 'GET',
@@ -43,8 +59,12 @@ module.exports = async function handler(req, res) {
 
       const rows = await sRes.json();
       if (!Array.isArray(rows) || rows.length === 0) {
+        recordFailedLogin(rateLimitKey);
         return res.status(401).json({ error: 'Invalid username or password' });
       }
+
+      // Successful login - clear rate limit
+      clearRateLimit(rateLimitKey);
 
       const userRow = rows[0];
       const token = generateToken({
@@ -79,7 +99,18 @@ module.exports = async function handler(req, res) {
   if (req.method === 'GET') {
     const user = requireAuth(req, res);
     if (!user) return; // 401 already sent by requireAuth
-    return res.status(200).json({ user });
+    return res.status(200).json({
+      authenticated: true,
+      user: {
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        displayName: user.displayName,
+        canExport: user.role === 'ADMIN' || user.role === 'SUPERVISOR',
+        canManageSettings: user.role === 'ADMIN',
+        allowedTabs: user.role === 'OPERATOR' ? ['entry'] : (user.role === 'SUPERVISOR' ? ['entry', 'kpi', 'logs', 'all'] : ['entry', 'kpi', 'logs', 'all', 'settings'])
+      }
+    });
   }
 
   // 3. PUT /api/auth (Update user credentials - Admin only)
@@ -156,6 +187,11 @@ module.exports = async function handler(req, res) {
     } catch (err) {
       return res.status(500).json({ error: 'Failed to update user account', message: err.message });
     }
+  }
+
+  // 4. DELETE /api/auth (Session Logout acknowledgement)
+  if (req.method === 'DELETE') {
+    return res.status(200).json({ message: 'Session logged out successfully' });
   }
 
   return res.status(405).json({ error: `Method ${req.method} not allowed` });

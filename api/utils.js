@@ -39,7 +39,8 @@ function verifyToken(token) {
 }
 
 function requireAuth(req, res, allowedRoles = null) {
-  const authHeader = req.headers.authorization || req.headers.Authorization || '';
+  const headers = req.headers || {};
+  const authHeader = headers.authorization || headers.Authorization || '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : authHeader.trim();
   const user = verifyToken(token);
 
@@ -60,7 +61,139 @@ function requireAuth(req, res, allowedRoles = null) {
   return user;
 }
 
+// In-Memory Rate Limiting for Login / Sensitive Operations
+const loginAttempts = new Map();
+
+function checkRateLimit(identifier, maxAttempts = 5, windowMs = 60000) {
+  const now = Date.now();
+  const record = loginAttempts.get(identifier);
+  if (!record) return { allowed: true, remaining: maxAttempts };
+
+  if (now - record.startTime > windowMs) {
+    loginAttempts.delete(identifier);
+    return { allowed: true, remaining: maxAttempts };
+  }
+
+  if (record.count >= maxAttempts) {
+    const retryAfter = Math.ceil((record.startTime + windowMs - now) / 1000);
+    return { allowed: false, retryAfter };
+  }
+
+  return { allowed: true, remaining: maxAttempts - record.count };
+}
+
+function recordFailedLogin(identifier, windowMs = 60000) {
+  const now = Date.now();
+  const record = loginAttempts.get(identifier);
+  if (!record || (now - record.startTime > windowMs)) {
+    loginAttempts.set(identifier, { count: 1, startTime: now });
+  } else {
+    record.count++;
+  }
+}
+
+function clearRateLimit(identifier) {
+  loginAttempts.delete(identifier);
+}
+
+// ----------------------------------------------------------------------------
+// Database Schema Mappers: PostgreSQL snake_case <-> Application camelCase
+// ----------------------------------------------------------------------------
+function mapRowToRecord(row) {
+  if (!row) return null;
+  const dtMin = parseInt(row.downtime_minutes, 10) || 0;
+  const aff = parseInt(row.affected_machines, 10) || 1;
+  const tot = parseInt(row.total_downtime_minutes, 10) || (dtMin * aff);
+  const recDate = row.date || new Date().toISOString().split('T')[0];
+  const resp = row.responsible_person || 'Pardhu';
+
+  return {
+    id: String(row.id),
+    date: recDate,
+    issueDate: recDate,
+    nature: row.nature || 'MES',
+    area: row.area || 'Plant-1',
+    process: row.process || 'General',
+    machineNo: row.machine_no || 'GEN_001',
+    machineType: row.machine_no || '',
+    isCritical: (row.is_critical === 'Yes' || row.is_critical === true) ? 'Yes' : 'No',
+    downtimeMinutes: dtMin,
+    affectedMachines: aff,
+    totalDowntimeMinutes: tot,
+    category: row.category || 'Other',
+    issueDetails: row.issue_details || '',
+    actionPlan: row.action_plan || '',
+    responsibility: row.responsibility || 'ATC',
+    closedDate: row.closed_date || (row.status === 'Completed' || row.status === 'Closed' ? recDate : ''),
+    solvedBy: resp,
+    responsiblePerson: resp,
+    status: row.status || 'Open',
+    remarks: row.remarks || '',
+    createdAt: row.created_at || new Date().toISOString(),
+    updatedAt: row.updated_at || new Date().toISOString()
+  };
+}
+
+function mapRecordToRow(record) {
+  if (!record) return null;
+  const dtMin = parseInt(record.downtimeMinutes, 10) || 0;
+  const aff = parseInt(record.affectedMachines !== undefined ? record.affectedMachines : 1, 10) || 1;
+  const tot = parseInt(record.totalDowntimeMinutes, 10) || (dtMin * aff);
+  const recDate = (record.issueDate || record.date || new Date().toISOString().split('T')[0]).toString().trim();
+  const resp = (record.solvedBy || record.responsiblePerson || 'Pardhu').toString().trim();
+
+  const isClosed = String(record.status || '').toLowerCase() === 'completed' || String(record.status || '').toLowerCase() === 'closed';
+  const closedDateVal = isClosed ? (record.closedDate ? String(record.closedDate).trim() : recDate) : null;
+
+  return {
+    id: String(record.id),
+    date: recDate,
+    nature: record.nature || 'MES',
+    area: record.area || 'Plant-1',
+    process: record.process || 'General',
+    machine_no: record.machineNo || record.machine_no || 'GEN_001',
+    is_critical: (record.isCritical === 'Yes' || record.isCritical === true) ? 'Yes' : 'No',
+    downtime_minutes: dtMin,
+    affected_machines: aff,
+    total_downtime_minutes: tot,
+    category: record.category || 'Other',
+    issue_details: record.issueDetails || record.issue_details || '',
+    action_plan: record.actionPlan || record.action_plan || '',
+    responsibility: record.responsibility || 'ATC',
+    closed_date: closedDateVal,
+    responsible_person: resp,
+    status: record.status || 'Open',
+    remarks: record.remarks || '',
+    updated_at: new Date().toISOString()
+  };
+}
+
+// ----------------------------------------------------------------------------
+// Formula & String Sanitization
+// ----------------------------------------------------------------------------
+function sanitizeFormula(val) {
+  if (val === null || val === undefined) return '';
+  const str = String(val);
+  // Protect against spreadsheet formula injection (=, +, -, @, \t, \r)
+  if (/^[=+\-@\t\r]/.test(str)) {
+    return `'${str}`;
+  }
+  return str;
+}
+
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// ----------------------------------------------------------------------------
 // Authoritative Availability Calculation
+// ----------------------------------------------------------------------------
 function calculateAuthoritativeAvailability(operatingMinutes, downtimeMinutes, hasOperatingData) {
   if (!hasOperatingData || !operatingMinutes || operatingMinutes <= 0) {
     return {
@@ -96,7 +229,9 @@ function calculateAuthoritativeAvailability(operatingMinutes, downtimeMinutes, h
   };
 }
 
+// ----------------------------------------------------------------------------
 // Authoritative Closure Rate Calculation
+// ----------------------------------------------------------------------------
 function calculateAuthoritativeClosureRate(records) {
   if (!Array.isArray(records) || records.length === 0) {
     return {
@@ -126,7 +261,9 @@ function calculateAuthoritativeClosureRate(records) {
   };
 }
 
+// ----------------------------------------------------------------------------
 // Authoritative MTTR Calculation
+// ----------------------------------------------------------------------------
 function calculateAuthoritativeMTTR(records) {
   if (!Array.isArray(records) || records.length === 0) {
     return {
@@ -154,7 +291,9 @@ function calculateAuthoritativeMTTR(records) {
   };
 }
 
+// ----------------------------------------------------------------------------
 // Comprehensive Server-Side Incident Validation
+// ----------------------------------------------------------------------------
 function validateIncident(data) {
   const errors = [];
 
@@ -189,12 +328,16 @@ function validateIncident(data) {
   const dt = parseInt(data.downtimeMinutes, 10);
   if (isNaN(dt) || dt <= 0) {
     errors.push('Downtime minutes must be a positive integer greater than 0.');
+  } else if (dt > 100000) {
+    errors.push('Downtime minutes exceeds realistic operational bounds (max 100,000).');
   }
 
   // Affected machines validation
   const affected = parseInt(data.affectedMachines !== undefined ? data.affectedMachines : 1, 10);
   if (isNaN(affected) || affected < 1) {
     errors.push('Affected machines count must be an integer of at least 1.');
+  } else if (affected > 1000) {
+    errors.push('Affected machines count exceeds realistic plant capacity.');
   }
 
   // Status-specific validation
@@ -240,6 +383,13 @@ module.exports = {
   generateToken,
   verifyToken,
   requireAuth,
+  checkRateLimit,
+  recordFailedLogin,
+  clearRateLimit,
+  mapRowToRecord,
+  mapRecordToRow,
+  sanitizeFormula,
+  escapeHtml,
   calculateAuthoritativeAvailability,
   calculateAuthoritativeClosureRate,
   calculateAuthoritativeMTTR,

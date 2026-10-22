@@ -3,6 +3,7 @@ const {
   SUPABASE_KEY,
   setCorsHeaders,
   requireAuth,
+  mapRowToRecord,
   calculateAuthoritativeAvailability,
   calculateAuthoritativeClosureRate,
   calculateAuthoritativeMTTR
@@ -25,9 +26,9 @@ module.exports = async function handler(req, res) {
     const { month, year, startDate, endDate, area } = req.query || {};
 
     let query = `${SUPABASE_URL}/rest/v1/incidents?select=*`;
-    if (startDate) query += `&issueDate=gte.${encodeURIComponent(startDate)}`;
-    if (endDate) query += `&issueDate=lte.${encodeURIComponent(endDate)}`;
-    if (month && month !== 'ALL' && !startDate && !endDate) query += `&issueDate=like.${encodeURIComponent(month)}*`;
+    if (startDate) query += `&date=gte.${encodeURIComponent(startDate)}`;
+    if (endDate) query += `&date=lte.${encodeURIComponent(endDate)}`;
+    if (month && month !== 'ALL' && !startDate && !endDate) query += `&date=like.${encodeURIComponent(month)}*`;
     if (area && area !== 'ALL') query += `&area=eq.${encodeURIComponent(area)}`;
 
     const sRes = await fetch(query, {
@@ -39,8 +40,9 @@ module.exports = async function handler(req, res) {
       return res.status(500).json({ error: 'Failed to fetch incident telemetry for KPIs' });
     }
 
-    const records = await sRes.json();
-    const hasRecords = Array.isArray(records) && records.length > 0;
+    const rows = await sRes.json();
+    const records = (Array.isArray(rows) ? rows : []).map(mapRowToRecord);
+    const hasRecords = records.length > 0;
 
     // Check if the plant was operating during the period
     let periodDays = 0;
@@ -58,7 +60,6 @@ module.exports = async function handler(req, res) {
         periodDays = totalDaysInMonth;
       }
     } else if (hasRecords) {
-      // Find date span from records
       const dates = records.map(r => r.issueDate).filter(Boolean).sort();
       if (dates.length > 0) {
         const s = new Date(dates[0]);

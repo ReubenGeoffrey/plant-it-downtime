@@ -29,8 +29,11 @@ module.exports = async function handler(req, res) {
     return res.status(200).end();
   }
 
-  // 1. GET /api/master-data
+  // 1. GET /api/master-data - Strictly require authentication
   if (req.method === 'GET') {
+    const user = requireAuth(req, res);
+    if (!user) return; // 401 sent if not authenticated
+
     return res.status(200).json({
       areas: DEFAULT_AREAS,
       categories: DEFAULT_CATEGORIES,
@@ -46,7 +49,12 @@ module.exports = async function handler(req, res) {
     if (!admin) return; // 401/403 sent
 
     return res.status(200).json({
-      message: 'Master data configuration updated successfully by Administrator'
+      message: 'Master data configuration updated successfully by Administrator',
+      audit: {
+        action: 'UPDATE_MASTER_DATA',
+        performedBy: admin.username,
+        timestamp: new Date().toISOString()
+      }
     });
   }
 
