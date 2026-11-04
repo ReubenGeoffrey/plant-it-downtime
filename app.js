@@ -3849,7 +3849,7 @@ function initAuthSystem() {
                   matchedUser = {
                     username: cloudUser.username,
                     role: cloudUser.role,
-                    displayName: cloudUser.display_name,
+                    displayName: cloudUser.display_name || cloudUser.displayName || (cloudUser.role === "OPERATOR" ? "Plant Operator" : (cloudUser.role === "SUPERVISOR" ? "Production Supervisor" : "Plant IT Admin")),
                     canExport: cloudUser.can_export !== false,
                     canManageSettings: cloudUser.can_manage_settings === true,
                     themeColor: cloudUser.theme_color || "red",

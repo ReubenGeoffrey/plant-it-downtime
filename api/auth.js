@@ -137,11 +137,13 @@ module.exports = async function handler(req, res) {
       });
 
       // Strictly omit password_hash from response
+      const dName = userRow.display_name || userRow.displayName || (userRow.role === 'OPERATOR' ? 'Plant Operator' : (userRow.role === 'SUPERVISOR' ? 'Production Supervisor' : 'Plant IT Admin'));
       const safeUser = {
         id: userRow.id,
         username: userRow.username,
         role: userRow.role,
-        displayName: userRow.display_name,
+        displayName: dName,
+        display_name: dName,
         canExport: userRow.can_export !== false,
         canManageSettings: userRow.can_manage_settings === true,
         themeColor: userRow.theme_color || 'red',
