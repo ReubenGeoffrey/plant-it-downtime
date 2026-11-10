@@ -3575,9 +3575,9 @@ window.setSpeedometerColor = function(theme) {
 
 // --- Initialization ---
 document.addEventListener("DOMContentLoaded", async () => {
+  initLiveClock();
   await initStorage();
   initFormControls();
-  initLiveClock();
   initMachineMultiSelectDropdown();
   initAreaMultiSelectDropdown();
   initFormAreaDropdown();
@@ -3585,12 +3585,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   initAreasDropdowns();
   initProcessesDropdowns();
   initTechniciansDropdown();
-  renderMasterPersonnelGrid();
   initCategoryDropdowns();
   initResponsibilityDropdown();
   initNatureSelector();
   initNatureFilterDropdown();
   initMachineSelector();
+  renderMasterSettingsUI();
   populateDefaultDates();
   initAuthSystem();
   setupDependentDropdowns();
@@ -3691,6 +3691,8 @@ window.quickLoginRole = function(roleKey) {
 window.handleUserLogout = function() {
   localStorage.removeItem("YOKOHAMA_CURRENT_USER");
   localStorage.removeItem("YOKOHAMA_ADMIN_LOGGED_IN");
+  sessionStorage.removeItem("YOKOHAMA_SESSION_TOKEN");
+  localStorage.removeItem("YOKOHAMA_SESSION_TOKEN");
   updateAuthUI(null);
   const userEl = document.getElementById("adminUsername");
   const passEl = document.getElementById("adminPassword");
@@ -3837,8 +3839,33 @@ function initAuthSystem() {
         let matchedUser = null;
         let cloudConnected = false;
 
-        // 1. Authenticate against Supabase Cloud Database (Authoritative Source of Truth)
-        if (typeof window.authenticateUserWithSupabase === "function") {
+        // 1. Authenticate against Serverless /api/auth API (Authoritative Server-Enforced RBAC)
+        let serverAuthenticated = false;
+        try {
+          const authReq = await fetch("/api/auth", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username: usernameInput, password: passwordInput })
+          });
+          if (authReq.ok) {
+            const authData = await authReq.json();
+            if (authData && authData.token && authData.user) {
+              serverAuthenticated = true;
+              matchedUser = authData.user;
+              sessionStorage.setItem("YOKOHAMA_SESSION_TOKEN", authData.token);
+              localStorage.setItem("YOKOHAMA_SESSION_TOKEN", authData.token);
+            }
+          } else if (authReq.status === 429) {
+            const errJson = await authReq.json().catch(() => ({}));
+            showToast(errJson.error || "Too many login attempts. Please wait before retrying.", "error");
+            return;
+          }
+        } catch (apiErr) {
+          console.warn("Direct /api/auth serverless call skipped/offline, testing resilient fallbacks:", apiErr);
+        }
+
+        // 2. Cloud Supabase Database Check (if API serverless route is bypassed in desktop/webview)
+        if (!matchedUser && typeof window.authenticateUserWithSupabase === "function") {
           try {
             const authRes = await window.authenticateUserWithSupabase(usernameInput, passwordInput);
             if (authRes && typeof authRes === "object") {
@@ -3855,7 +3882,6 @@ function initAuthSystem() {
                     themeColor: cloudUser.theme_color || "red",
                     allowedTabs: cloudUser.role === "OPERATOR" ? ["entry"] : (cloudUser.role === "SUPERVISOR" ? ["entry", "kpi", "logs", "all"] : ["entry", "kpi", "logs", "all", "settings"])
                   };
-                  // Sync updated cloud account into local cache & delete plain password
                   const rKey = (cloudUser.role || "").toLowerCase();
                   if (USER_ACCOUNTS[rKey]) {
                     USER_ACCOUNTS[rKey].username = cloudUser.username;
@@ -3866,16 +3892,6 @@ function initAuthSystem() {
                   }
                 }
               }
-            } else if (authRes) {
-              matchedUser = {
-                username: authRes.username,
-                role: authRes.role,
-                displayName: authRes.display_name,
-                canExport: authRes.can_export !== false,
-                canManageSettings: authRes.can_manage_settings === true,
-                themeColor: authRes.theme_color || "red",
-                allowedTabs: authRes.role === "OPERATOR" ? ["entry"] : (authRes.role === "SUPERVISOR" ? ["entry", "kpi", "logs", "all"] : ["entry", "kpi", "logs", "all", "settings"])
-              };
             }
           } catch (cloudErr) {
             console.warn("Cloud auth error, testing offline fallback:", cloudErr);
@@ -3883,19 +3899,26 @@ function initAuthSystem() {
           }
         }
 
-        // 2. Offline Fallback ONLY: If cloud is completely unreachable.
-        // If cloud was connected and found no user, credentials are wrong or old - DO NOT allow old credentials!
+        // 3. Offline Standalone Fallback ONLY: Compares cryptographic SHA-256 hashes only (zero plain passwords)
         if (!matchedUser && !cloudConnected) {
           const pHash = await hashCredential(passwordInput);
           for (const key of Object.keys(USER_ACCOUNTS)) {
             const acc = USER_ACCOUNTS[key];
             if (acc && acc.username && acc.username.toLowerCase() === usernameInput) {
               const isMatch = (acc.passwordHash && pHash === acc.passwordHash) ||
-                (acc.role === "SUPERVISOR" && (passwordInput === "super123" || passwordInput === "supervisor123" || pHash === "4e4c56e4a15f89f05c2f4c72613da2a18c9665d4f0d6acce16415eb06f9be776")) ||
-                (acc.role === "OPERATOR" && (passwordInput === "operator123" || passwordInput === "oper123" || pHash === "ec6e1c25258002eb1c67d15c7f45da7945fa4c58778fd7d88faa5e53e3b4698d" || pHash === "5746b142df3f4ddbfdf0fa49c30fef6509f6e5a61fc726ff2c0cb77d7ffccff0")) ||
-                (acc.role === "ADMIN" && (passwordInput === "admin123" || pHash === "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9"));
+                (acc.role === "SUPERVISOR" && (pHash === "4e4c56e4a15f89f05c2f4c72613da2a18c9665d4f0d6acce16415eb06f9be776" || pHash === "7b1c3e3a4e929f0464f89d79ca82fe5daff0da070c01a1e7b9dd4bcf6b509ef5")) ||
+                (acc.role === "OPERATOR" && (pHash === "ec6e1c25258002eb1c67d15c7f45da7945fa4c58778fd7d88faa5e53e3b4698d" || pHash === "5746b142df3f4ddbfdf0fa49c30fef6509f6e5a61fc726ff2c0cb77d7ffccff0")) ||
+                (acc.role === "ADMIN" && (pHash === "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9"));
               if (isMatch) {
-                matchedUser = acc;
+                matchedUser = {
+                  username: acc.username,
+                  role: acc.role,
+                  displayName: acc.displayName,
+                  canExport: acc.canExport !== false,
+                  canManageSettings: acc.canManageSettings === true,
+                  themeColor: acc.themeColor || "red",
+                  allowedTabs: acc.allowedTabs || (acc.role === "OPERATOR" ? ["entry"] : (acc.role === "SUPERVISOR" ? ["entry", "kpi", "logs", "all"] : ["entry", "kpi", "logs", "all", "settings"]))
+                };
                 break;
               }
             }
@@ -7579,6 +7602,7 @@ function renderRecordsTable() {
 
   updateTableCategoryStrip();
   updateSortIcons();
+  updateMaintenanceLogCount();
 
   if (countEl) countEl.textContent = `${filtered.length} Incident${filtered.length === 1 ? '' : 's'}`;
   if (showingInfo) {
@@ -7637,10 +7661,10 @@ function renderRecordsTable() {
     return `
       <tr class="hover:bg-slate-50/80 transition-colors border-b border-slate-100 group">
         <td class="px-4 py-3.5 font-mono text-xs font-bold text-slate-900 whitespace-nowrap">
-          ${rec.id}
+          ${escapeHtml(rec.id)}
         </td>
         <td class="px-4 py-3.5 whitespace-nowrap text-xs font-semibold text-slate-600">
-          ${rec.issueDate}
+          ${escapeHtml(rec.issueDate)}
         </td>
         <td class="px-4 py-3.5 whitespace-nowrap">
           ${natureBadge}
@@ -7649,12 +7673,12 @@ function renderRecordsTable() {
           ${getCategoryBadge(rec.category)}
         </td>
         <td class="px-4 py-3.5 text-xs font-bold text-slate-800 whitespace-nowrap">
-          <div class="px-2 py-0.5 bg-slate-900 text-white rounded text-[11px] font-bold inline-block">${rec.area}</div>
-          <div class="text-[10px] text-slate-500 font-semibold mt-0.5">${rec.process || 'General'}</div>
+          <div class="px-2 py-0.5 bg-slate-900 text-white rounded text-[11px] font-bold inline-block">${escapeHtml(rec.area)}</div>
+          <div class="text-[10px] text-slate-500 font-semibold mt-0.5">${escapeHtml(rec.process || 'General')}</div>
         </td>
         <td class="px-4 py-3.5 text-xs whitespace-nowrap">
           <div class="flex items-center gap-1.5">
-            <span class="font-bold text-slate-900 font-mono text-red-600">${rec.machineNo}</span>
+            <span class="font-bold text-slate-900 font-mono text-red-600">${escapeHtml(rec.machineNo)}</span>
             ${rec.isCritical === "Yes"
               ? `<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-black bg-red-100 text-red-700 border border-red-200" title="Critical Production Machine"><i class="fa-solid fa-triangle-exclamation text-[8px]"></i> CRIT</span>`
               : `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-100 text-slate-500 border border-slate-200">STD</span>`}
@@ -7676,17 +7700,17 @@ function renderRecordsTable() {
           </span>
         </td>
         <td class="px-4 py-3.5 text-xs text-slate-700 max-w-[220px]">
-          <div class="font-semibold text-slate-900 truncate" title="${rec.issueDetails}">${rec.issueDetails}</div>
-          <div class="text-[11px] text-slate-500 truncate" title="${rec.actionPlan || 'Troubleshooting done'}">
-            <i class="fa-solid fa-wrench text-[9px] mr-1 text-slate-400"></i>${rec.actionPlan || 'Troubleshooting done'}
+          <div class="font-semibold text-slate-900 truncate" title="${escapeHtml(rec.issueDetails)}">${escapeHtml(rec.issueDetails)}</div>
+          <div class="text-[11px] text-slate-500 truncate" title="${escapeHtml(rec.actionPlan || 'Troubleshooting done')}">
+            <i class="fa-solid fa-wrench text-[9px] mr-1 text-slate-400"></i>${escapeHtml(rec.actionPlan || 'Troubleshooting done')}
           </div>
         </td>
         <td class="px-4 py-3.5 whitespace-nowrap text-xs">
           <span class="font-bold text-slate-800 flex items-center gap-1.5">
             <span class="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center text-[10px] text-slate-700 font-black">
-              ${rec.solvedBy ? rec.solvedBy.charAt(0) : 'T'}
+              ${escapeHtml(rec.solvedBy ? rec.solvedBy.charAt(0) : 'T')}
             </span>
-            ${rec.solvedBy || 'Unassigned'}
+            ${escapeHtml(rec.solvedBy || 'Unassigned')}
           </span>
         </td>
         <td class="px-4 py-3.5 whitespace-nowrap">
@@ -7694,17 +7718,17 @@ function renderRecordsTable() {
         </td>
         <td class="px-4 py-3.5 text-right whitespace-nowrap">
           <div class="flex items-center justify-end gap-1.5 opacity-90 group-hover:opacity-100">
-            <button onclick="viewRecordDetails('${rec.id}')" title="View Full Details" class="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded transition-all">
+            <button onclick="viewRecordDetails('${escapeHtml(rec.id)}')" aria-label="View record ${escapeHtml(rec.id)}" title="View Full Details" class="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded transition-all">
               <i class="fa-solid fa-eye text-xs"></i>
             </button>
             ${(typeof getCurrentUser === "function" && getCurrentUser() && getCurrentUser().role === "ADMIN") ? `
-            <button onclick="loadRecordForEdit('${rec.id}')" title="Edit Entry" class="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-all">
+            <button onclick="loadRecordForEdit('${escapeHtml(rec.id)}')" aria-label="Edit record ${escapeHtml(rec.id)}" title="Edit Entry" class="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-all">
               <i class="fa-solid fa-pen-to-square text-xs"></i>
             </button>
-            <button onclick="toggleRecordStatus('${rec.id}')" title="Toggle Open/Completed" class="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-all">
+            <button onclick="toggleRecordStatus('${escapeHtml(rec.id)}')" aria-label="Toggle status for record ${escapeHtml(rec.id)}" title="Toggle Open/Completed" class="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-all">
               <i class="fa-solid fa-arrows-rotate text-xs"></i>
             </button>
-            <button onclick="deleteRecord('${rec.id}')" title="Delete Entry" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-all">
+            <button onclick="deleteRecord('${escapeHtml(rec.id)}')" aria-label="Delete record ${escapeHtml(rec.id)}" title="Delete Entry" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-all">
               <i class="fa-solid fa-trash text-xs"></i>
             </button>
             ` : ''}
@@ -7730,39 +7754,39 @@ window.viewRecordDetails = function(id) {
     <div class="space-y-4">
       <div class="flex items-center justify-between pb-4 border-b border-slate-200">
         <div>
-          <span class="text-xs font-mono font-bold text-red-600 bg-red-50 px-2 py-1 rounded border border-red-200">${rec.id}</span>
-          <h4 class="text-lg font-bold text-slate-900 mt-1">${rec.machineNo} - ${rec.area}</h4>
+          <span class="text-xs font-mono font-bold text-red-600 bg-red-50 px-2 py-1 rounded border border-red-200">${escapeHtml(rec.id)}</span>
+          <h4 class="text-lg font-bold text-slate-900 mt-1">${escapeHtml(rec.machineNo)} - ${escapeHtml(rec.area)}</h4>
         </div>
         <span class="px-3 py-1 rounded-full text-xs font-bold ${isCompleted ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}">
-          ${rec.status}
+          ${escapeHtml(rec.status)}
         </span>
       </div>
 
       <div class="grid grid-cols-2 gap-3 text-sm">
         <div class="p-3 bg-slate-50 rounded-lg">
           <span class="text-[11px] font-bold text-slate-500 uppercase block">Issue Date</span>
-          <span class="font-semibold text-slate-800">${rec.issueDate}</span>
+          <span class="font-semibold text-slate-800">${escapeHtml(rec.issueDate)}</span>
         </div>
         <div class="p-3 bg-slate-50 rounded-lg">
           <span class="text-[11px] font-bold text-slate-500 uppercase block">Closed Date</span>
-          <span class="font-semibold text-slate-800">${rec.closedDate || 'Pending'}</span>
+          <span class="font-semibold text-slate-800">${escapeHtml(rec.closedDate || 'Pending')}</span>
         </div>
         <div class="p-3 bg-slate-50 rounded-lg">
           <span class="text-[11px] font-bold text-slate-500 uppercase block">Nature</span>
-          <span class="font-semibold text-slate-800">${rec.nature}</span>
+          <span class="font-semibold text-slate-800">${escapeHtml(rec.nature)}</span>
         </div>
         <div class="p-3 bg-slate-50 rounded-lg">
           <span class="text-[11px] font-bold text-slate-500 uppercase block">Downtime Metrics</span>
           <div class="space-y-1 mt-1 text-xs font-mono">
-            <div class="flex justify-between"><span class="text-slate-500">Per Machine:</span> <span class="font-bold text-slate-800">${rec.downtimeMinutes || 0} mins</span></div>
-            <div class="flex justify-between"><span class="text-slate-500">Machines Affected:</span> <span class="font-bold text-amber-700">${rec.affectedMachines || 1}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">Per Machine:</span> <span class="font-bold text-slate-800">${Number(rec.downtimeMinutes) || 0} mins</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">Machines Affected:</span> <span class="font-bold text-amber-700">${Number(rec.affectedMachines) || 1}</span></div>
             <div class="flex justify-between border-t border-slate-200 pt-0.5"><span class="text-slate-500 font-bold">Total DT:</span> <span class="font-black text-red-600">${rec.totalDowntimeMinutes || ((Number(rec.downtimeMinutes) || 0) * (Number(rec.affectedMachines) || 1))} mins (${(((rec.totalDowntimeMinutes || ((Number(rec.downtimeMinutes) || 0) * (Number(rec.affectedMachines) || 1)))) / 60).toFixed(1)} hrs)</span></div>
           </div>
         </div>
         <div class="p-3 bg-slate-50 rounded-lg">
           <span class="text-[11px] font-bold text-slate-500 uppercase block">Machine & Process</span>
-          <span class="font-semibold text-slate-800">${rec.machineNo}</span>
-          <span class="ml-2 text-xs px-2 py-0.5 rounded bg-slate-200 text-slate-700 font-bold">${rec.process || 'General'}</span>
+          <span class="font-semibold text-slate-800">${escapeHtml(rec.machineNo)}</span>
+          <span class="ml-2 text-xs px-2 py-0.5 rounded bg-slate-200 text-slate-700 font-bold">${escapeHtml(rec.process || 'General')}</span>
         </div>
         <div class="p-3 bg-slate-50 rounded-lg">
           <span class="text-[11px] font-bold text-slate-500 uppercase block">Criticality Status</span>
@@ -7772,32 +7796,32 @@ window.viewRecordDetails = function(id) {
         </div>
         <div class="p-3 bg-slate-50 rounded-lg">
           <span class="text-[11px] font-bold text-slate-500 uppercase block">Category</span>
-          <span class="font-semibold text-slate-800">${rec.category}</span>
+          <span class="font-semibold text-slate-800">${escapeHtml(rec.category)}</span>
         </div>
         <div class="p-3 bg-slate-50 rounded-lg">
           <span class="text-[11px] font-bold text-slate-500 uppercase block">Responsibility</span>
-          <span class="font-semibold text-slate-800">${rec.responsibility}</span>
+          <span class="font-semibold text-slate-800">${escapeHtml(rec.responsibility)}</span>
         </div>
       </div>
 
       <div class="p-3 bg-slate-50 rounded-lg text-sm">
         <span class="text-[11px] font-bold text-slate-500 uppercase block mb-1">Issue Details</span>
-        <p class="text-slate-800 font-medium">${rec.issueDetails}</p>
+        <p class="text-slate-800 font-medium">${escapeHtml(rec.issueDetails)}</p>
       </div>
 
       <div class="p-3 bg-emerald-50/50 border border-emerald-100 rounded-lg text-sm">
         <span class="text-[11px] font-bold text-emerald-800 uppercase block mb-1">Action Plan</span>
-        <p class="text-slate-800">${rec.actionPlan || 'No action plan recorded.'}</p>
+        <p class="text-slate-800">${escapeHtml(rec.actionPlan || 'No action plan recorded.')}</p>
       </div>
 
       <div class="grid grid-cols-2 gap-3 text-sm">
         <div class="p-3 bg-slate-50 rounded-lg">
           <span class="text-[11px] font-bold text-slate-500 uppercase block">Responsible Person</span>
-          <span class="font-bold text-slate-900">${rec.solvedBy || 'Unassigned'}</span>
+          <span class="font-bold text-slate-900">${escapeHtml(rec.solvedBy || 'Unassigned')}</span>
         </div>
         <div class="p-3 bg-slate-50 rounded-lg">
           <span class="text-[11px] font-bold text-slate-500 uppercase block">Remarks</span>
-          <span class="text-slate-700">${rec.remarks || 'None'}</span>
+          <span class="text-slate-700">${escapeHtml(rec.remarks || 'None')}</span>
         </div>
       </div>
     </div>
@@ -7932,6 +7956,10 @@ function updateMaintenanceLogCount() {
   if (el) {
     el.textContent = `${downtimeRecords.length} Incidents (${downtimeRecords.length === 0 ? "Clean Slate / Empty" : "Active Data"})`;
   }
+  const dbCountEl = document.getElementById("dbSettingsIncidentCount");
+  if (dbCountEl) {
+    dbCountEl.textContent = `${downtimeRecords.length} Incident Record${downtimeRecords.length === 1 ? '' : 's'}`;
+  }
 }
 window.updateMaintenanceLogCount = updateMaintenanceLogCount;
 
@@ -7978,9 +8006,15 @@ function getFilteredDashboardRecords() {
   return downtimeRecords.filter(r => {
     if (!r.issueDate) return false;
 
-    // Year filter (if not ALL)
+    // Year / FY filter (if not ALL)
     if (dashboardDateFilter.year && dashboardDateFilter.year !== "ALL") {
-      if (!r.issueDate.startsWith(dashboardDateFilter.year)) return false;
+      if (dashboardDateFilter.year === "FY2026") {
+        if (r.issueDate < "2026-04-01" || r.issueDate > "2027-03-31") return false;
+      } else if (dashboardDateFilter.year === "2026") {
+        if (!r.issueDate.startsWith("2026")) return false;
+      } else if (!r.issueDate.startsWith(dashboardDateFilter.year)) {
+        return false;
+      }
     }
 
     // Start Date filter
@@ -8050,37 +8084,74 @@ function populateDashboardMonths() {
   const select = document.getElementById("dashboardMonthFilter");
   if (!select) return;
 
+  const yearSetting = dashboardDateFilter.year || "2026";
   const monthSet = new Set();
+
+  if (yearSetting === "FY2026") {
+    // Japanese / Indian Fiscal Year: April 2026 to March 2027
+    const fyOrder = [
+      "2026-04", "2026-05", "2026-06", "2026-07", "2026-08", "2026-09",
+      "2026-10", "2026-11", "2026-12", "2027-01", "2027-02", "2027-03"
+    ];
+    fyOrder.forEach(m => monthSet.add(m));
+  } else if (yearSetting === "2026") {
+    // Calendar Year 2026 (Jan - Dec)
+    for (let mo = 1; mo <= 12; mo++) {
+      monthSet.add(`2026-${String(mo).padStart(2, "0")}`);
+    }
+  } else {
+    // ALL years / periods: collect from records and current year
+    downtimeRecords.forEach(r => {
+      if (r.issueDate && r.issueDate.length >= 7) {
+        monthSet.add(r.issueDate.substring(0, 7));
+      }
+    });
+    const curYear = new Date().getFullYear();
+    for (let mo = 1; mo <= 12; mo++) {
+      monthSet.add(`${curYear}-${String(mo).padStart(2, "0")}`);
+    }
+  }
+
+  // Also include any months present in downtimeRecords matching the year prefix
   downtimeRecords.forEach(r => {
     if (r.issueDate && r.issueDate.length >= 7) {
-      monthSet.add(r.issueDate.substring(0, 7));
+      const ym = r.issueDate.substring(0, 7);
+      if (yearSetting === "ALL" || (yearSetting === "2026" && ym.startsWith("2026")) || (yearSetting === "FY2026" && (ym.startsWith("2026") || ym.startsWith("2027")))) {
+        monthSet.add(ym);
+      }
     }
   });
 
-  const sortedMonths = Array.from(monthSet).sort().reverse();
+  // Sort strictly in chronological order (ascending: Jan -> Dec)
+  const sortedMonths = Array.from(monthSet).sort();
 
   let html = '<option value="ALL">All Months</option>';
-  if (sortedMonths.length === 0) {
-    const curYear = new Date().getFullYear();
-    for (let mo = 1; mo <= 12; mo++) {
-      const mStr = `${curYear}-${String(mo).padStart(2, "0")}`;
-      const label = `${getMonthName(mo - 1)} ${curYear}`;
-      html += `<option value="${mStr}">${label}</option>`;
-    }
-  } else {
-    sortedMonths.forEach(mStr => {
-      const parts = mStr.split("-");
-      const y = parts[0];
-      const m = parts[1];
-      const mIdx = parseInt(m, 10) - 1;
-      const label = `${getMonthName(mIdx)} ${y}`;
-      html += `<option value="${mStr}">${label}</option>`;
-    });
-  }
+  sortedMonths.forEach(mStr => {
+    const parts = mStr.split("-");
+    const y = parts[0];
+    const m = parts[1];
+    const mIdx = parseInt(m, 10) - 1;
+    const label = `${getMonthName(mIdx)} ${y}`;
+    html += `<option value="${mStr}">${label}</option>`;
+  });
 
   select.innerHTML = html;
-  if (dashboardDateFilter.month) {
+  if (dashboardDateFilter.month && (dashboardDateFilter.month === "ALL" || monthSet.has(dashboardDateFilter.month))) {
     select.value = dashboardDateFilter.month;
+  } else {
+    dashboardDateFilter.month = "ALL";
+    select.value = "ALL";
+  }
+
+  // Update export button label
+  const btnExportLabel = document.getElementById("btnExportDashboardPeriodText");
+  if (btnExportLabel) {
+    if (select.value !== "ALL") {
+      const [y, m] = select.value.split("-");
+      btnExportLabel.textContent = `Export ${getMonthName(parseInt(m, 10) - 1)} ${y} Excel`;
+    } else {
+      btnExportLabel.textContent = "Export All Excel";
+    }
   }
 }
 window.populateDashboardMonths = populateDashboardMonths;
@@ -8153,9 +8224,11 @@ window.onDashboardDateFilterChange = function() {
 
 window.onDashboardYearChange = function(yearVal) {
   dashboardDateFilter.year = yearVal;
+  populateDashboardMonths();
   renderKPIs();
   renderCharts();
-  showToast(`Dashboard filtered for Year ${yearVal}`, "info");
+  const yearDesc = yearVal === "FY2026" ? "FY 2026-27 (Apr - Mar)" : (yearVal === "2026" ? "CY 2026" : "All Periods");
+  showToast(`Dashboard filtered for ${yearDesc}`, "info");
 };
 
 window.resetDashboardFilters = function() {
@@ -8174,8 +8247,9 @@ window.resetDashboardFilters = function() {
 
   if (sdInput) sdInput.value = "";
   if (edInput) edInput.value = "";
-  if (monthSelect) monthSelect.value = "ALL";
   if (yearSelect) yearSelect.value = "2026";
+  populateDashboardMonths();
+  if (monthSelect) monthSelect.value = "ALL";
 
   renderKPIs();
   renderCharts();
@@ -8191,6 +8265,7 @@ function escapeHtml(str) {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
 }
+window.escapeHtml = escapeHtml;
 
 // --- KPI Calculations ---
 function renderKPIs() {
@@ -8456,20 +8531,41 @@ function renderCharts() {
   // -------------------------------------------------------------
   // Total Automatch Availability Badges (Year, Month, Day)
   // -------------------------------------------------------------
-  const currentYear = (dashboardDateFilter.year && dashboardDateFilter.year !== "ALL") ? dashboardDateFilter.year : "2026";
-  const yearRecs = downtimeRecords.filter(r => r.issueDate && r.issueDate.startsWith(currentYear));
-  const yearDays = currentYear === "2026" ? 181 : 365;
+  const yearMode = dashboardDateFilter.year || "2026";
+  let yearRecs = [];
+  let yearDays = 365;
+  if (yearMode === "FY2026") {
+    yearRecs = downtimeRecords.filter(r => r.issueDate && r.issueDate >= "2026-04-01" && r.issueDate <= "2027-03-31");
+    yearDays = 365;
+  } else if (yearMode === "2026") {
+    yearRecs = downtimeRecords.filter(r => r.issueDate && r.issueDate.startsWith("2026"));
+    yearDays = 365;
+  } else {
+    yearRecs = downtimeRecords.filter(r => r.issueDate);
+    const uniqueDays = new Set(yearRecs.map(r => r.issueDate));
+    yearDays = Math.max(30, uniqueDays.size);
+  }
   const yearOpMins = yearDays * 24 * 60 * standardAreas.length;
   const yearDtMins = yearRecs.reduce((acc, r) => acc + (parseInt(r.downtimeMinutes, 10) || 0), 0);
-  const yearAvail = Math.min(100, Math.max(0, ((yearOpMins - yearDtMins) / yearOpMins) * 100));
+  const yearAvail = yearOpMins > 0 ? Math.min(100, Math.max(0, ((yearOpMins - yearDtMins) / yearOpMins) * 100)) : 100;
 
-  let targetMonth = dashboardDateFilter.month !== "ALL" ? dashboardDateFilter.month : `${currentYear}-06`;
+  // Determine target month: selected month, or latest recorded month, or current month
+  let targetMonth = dashboardDateFilter.month;
+  if (!targetMonth || targetMonth === "ALL") {
+    if (downtimeRecords.length > 0 && downtimeRecords[downtimeRecords.length - 1].issueDate) {
+      targetMonth = downtimeRecords[downtimeRecords.length - 1].issueDate.substring(0, 7);
+    } else {
+      const today = new Date();
+      targetMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+    }
+  }
+
   const monthRecs = downtimeRecords.filter(r => r.issueDate && r.issueDate.startsWith(targetMonth));
   const [tYear, tMonth] = targetMonth.split("-").map(Number);
   const mDays = getElapsedDaysInMonth(tYear, tMonth, downtimeRecords);
   const monthOpMins = Math.max(1, mDays) * 24 * 60 * standardAreas.length;
   const monthDtMins = monthRecs.reduce((acc, r) => acc + (parseInt(r.downtimeMinutes, 10) || 0), 0);
-  const monthAvail = Math.min(100, Math.max(0, ((monthOpMins - monthDtMins) / monthOpMins) * 100));
+  const monthAvail = monthOpMins > 0 ? Math.min(100, Math.max(0, ((monthOpMins - monthDtMins) / monthOpMins) * 100)) : 100;
 
   const elYearAvail = document.getElementById("kpiYearAvailVal");
   const elYearLabel = document.getElementById("kpiYearLabel");
@@ -8478,13 +8574,12 @@ function renderCharts() {
   const elMonthlyTitle = document.getElementById("monthlyAvailabilityTitle");
 
   if (elYearAvail) elYearAvail.textContent = `${yearAvail.toFixed(2)}%`;
-  if (elYearLabel) elYearLabel.textContent = currentYear;
+  if (elYearLabel) elYearLabel.textContent = yearMode === "FY2026" ? "FY 26-27" : (yearMode === "2026" ? "CY 2026" : "All");
   if (elMonthAvail) elMonthAvail.textContent = `${monthAvail.toFixed(2)}%`;
   if (elDayAvail) elDayAvail.textContent = `${overallAvailFormatted}%`;
   if (elMonthlyTitle) {
-    elMonthlyTitle.textContent = dashboardDateFilter.year !== "ALL"
-      ? `Monthly Availability (FY ${dashboardDateFilter.year})`
-      : "Monthly Availability (All Fiscal Years)";
+    const yrLabel = yearMode === "FY2026" ? "FY 2026-27 (Apr-Mar)" : (yearMode === "2026" ? "CY 2026" : "All Periods");
+    elMonthlyTitle.textContent = `Monthly Availability (${yrLabel})`;
   }
 
   // -------------------------------------------------------------
@@ -8494,21 +8589,37 @@ function renderCharts() {
   if (ctxMonthly) {
     if (monthlyAvailabilityInstance) monthlyAvailabilityInstance.destroy();
 
-    // Dynamically identify months for the chosen year
+    // Dynamically identify months for the chosen year convention
     const fyMonthSet = new Set();
+    if (yearMode === "FY2026") {
+      ["2026-04", "2026-05", "2026-06", "2026-07", "2026-08", "2026-09", "2026-10", "2026-11", "2026-12", "2027-01", "2027-02", "2027-03"].forEach(m => fyMonthSet.add(m));
+    } else if (yearMode === "2026") {
+      for (let mo = 1; mo <= 12; mo++) {
+        fyMonthSet.add(`2026-${String(mo).padStart(2, "0")}`);
+      }
+    } else {
+      downtimeRecords.forEach(r => {
+        if (r.issueDate && r.issueDate.length >= 7) {
+          fyMonthSet.add(r.issueDate.substring(0, 7));
+        }
+      });
+      const curY = new Date().getFullYear();
+      for (let mo = 1; mo <= 12; mo++) {
+        fyMonthSet.add(`${curY}-${String(mo).padStart(2, "0")}`);
+      }
+    }
+
+    // Also include months present in records
     downtimeRecords.forEach(r => {
       if (r.issueDate && r.issueDate.length >= 7) {
         const ym = r.issueDate.substring(0, 7);
-        if (dashboardDateFilter.year === "ALL" || ym.startsWith(dashboardDateFilter.year)) {
+        if (yearMode === "ALL" || (yearMode === "2026" && ym.startsWith("2026")) || (yearMode === "FY2026" && (ym.startsWith("2026") || ym.startsWith("2027")))) {
           fyMonthSet.add(ym);
         }
       }
     });
 
     const fyMonths = Array.from(fyMonthSet).sort();
-    if (fyMonths.length === 0) {
-      fyMonths.push("2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06");
-    }
 
     const fyLabels = fyMonths.map(ym => {
       const [y, m] = ym.split("-").map(Number);
@@ -9798,7 +9909,7 @@ async function generateSpeedometerImage(availabilityVal, width = 540, height = 3
       ctx.fillText(val.toFixed(2) + "%", cx, cy + 28);
 
       ctx.font = "bold 11px Segoe UI, Arial, sans-serif";
-      const statusText = val >= 99.0 ? "AVAILABILITY (≥99%)" : (val >= 95.0 ? "WARNING (95-98.9%)" : "CRITICAL ALERT (<95%)");
+      const statusText = val >= 99.0 ? "AVAILABILITY (≥99.0%)" : (val >= 95.0 ? "WARNING (95.0% to <99.0%)" : "CRITICAL ALERT (<95.0%)");
       ctx.fillStyle = val >= 99.0 ? "#059669" : (val >= 95.0 ? "#D97706" : "#DC2626");
       ctx.fillText(statusText, cx, cy + 48);
 
@@ -13538,41 +13649,53 @@ window.exportToCSV = function(customOptions = null) {
     "Remarks"
   ];
 
+  const sanitizeCsvField = (val) => {
+    if (val === null || val === undefined) return '""';
+    let str = String(val);
+    // Neutralize spreadsheet formula injection (=, +, -, @, tab, CR)
+    if (/^[=\+\-@\t\r]/.test(str)) {
+      str = "'" + str;
+    }
+    return `"${str.replace(/"/g, '""')}"`;
+  };
+
   const rows = targetRecords.map(r => {
     const dtMin = parseInt(r.downtimeMinutes, 10) || 0;
     const aff = parseInt(r.affectedMachines, 10) || 1;
     const totMins = parseInt(r.totalDowntimeMinutes, 10) || (dtMin * aff);
     return [
-      `"${r.id}"`,
-      `"${r.issueDate}"`,
-      `"${r.nature}"`,
-      `"${r.area}"`,
-      `"${r.process || ''}"`,
-      `"${r.machineNo}"`,
-      `"${r.isCritical || 'No'}"`,
+      sanitizeCsvField(r.id),
+      sanitizeCsvField(r.issueDate),
+      sanitizeCsvField(r.nature),
+      sanitizeCsvField(r.area),
+      sanitizeCsvField(r.process || ''),
+      sanitizeCsvField(r.machineNo),
+      sanitizeCsvField(r.isCritical || 'No'),
       dtMin,
       aff,
       totMins,
       parseFloat((totMins / 60).toFixed(2)),
-      `"${r.category}"`,
-      `"${(r.issueDetails || '').replace(/"/g, '""')}"`,
-      `"${(r.actionPlan || '').replace(/"/g, '""')}"`,
-      `"${r.responsibility}"`,
-      `"${r.closedDate || ''}"`,
-      `"${r.solvedBy}"`,
-      `"${r.status}"`,
-      `"${(r.remarks || '').replace(/"/g, '""')}"`
+      sanitizeCsvField(r.category),
+      sanitizeCsvField(r.issueDetails || ''),
+      sanitizeCsvField(r.actionPlan || ''),
+      sanitizeCsvField(r.responsibility),
+      sanitizeCsvField(r.closedDate || ''),
+      sanitizeCsvField(r.solvedBy),
+      sanitizeCsvField(r.status),
+      sanitizeCsvField(r.remarks || '')
     ];
   });
 
-  const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
-  const encodedUri = encodeURI(csvContent);
+  const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(e => e.join(","))].join("\r\n");
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
-  link.setAttribute("href", encodedUri);
+  link.setAttribute("href", url);
   link.setAttribute("download", `Plant_IT_Downtime_${fileSuffix}_${getLocalDateString()}.csv`);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 
   showToast(`CSV export for ${periodLabel} downloaded successfully!`, "success");
 };
@@ -13589,10 +13712,14 @@ function showToast(message, type = "info") {
   if (type === "success") icon = "fa-circle-check text-emerald-400";
   else if (type === "warning") icon = "fa-triangle-exclamation text-amber-400";
 
-  toast.innerHTML = `
-    <i class="fa-solid ${icon} text-base"></i>
-    <span class="flex-1">${message}</span>
-  `;
+  const iconEl = document.createElement("i");
+  iconEl.className = `fa-solid ${icon} text-base`;
+  const msgEl = document.createElement("span");
+  msgEl.className = "flex-1";
+  msgEl.textContent = String(message || "");
+
+  toast.appendChild(iconEl);
+  toast.appendChild(msgEl);
 
   container.appendChild(toast);
 
@@ -13602,3 +13729,28 @@ function showToast(message, type = "info") {
     setTimeout(() => toast.remove(), 300);
   }, 3500);
 }
+window.showToast = showToast;
+
+// --- Modal Accessibility & Keyboard Handling (WCAG 2.2) ---
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    if (typeof closeDetailsModal === "function") closeDetailsModal();
+    if (typeof closeDateExportModal === "function") closeDateExportModal();
+    if (typeof closeImportDowntimeModal === "function") closeImportDowntimeModal();
+  }
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+  ["detailsModal", "dateExportModal", "importDowntimeModal"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener("click", (e) => {
+        if (e.target === el) {
+          if (id === "detailsModal" && typeof closeDetailsModal === "function") closeDetailsModal();
+          else if (id === "dateExportModal" && typeof closeDateExportModal === "function") closeDateExportModal();
+          else if (id === "importDowntimeModal" && typeof closeImportDowntimeModal === "function") closeImportDowntimeModal();
+        }
+      });
+    }
+  });
+});
