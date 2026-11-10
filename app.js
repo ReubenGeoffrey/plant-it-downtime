@@ -3628,7 +3628,7 @@ const DEFAULT_USER_ACCOUNTS = {
     passwordHash: "4e4c56e4a15f89f05c2f4c72613da2a18c9665d4f0d6acce16415eb06f9be776",
     role: "SUPERVISOR",
     displayName: "Production Supervisor",
-    allowedTabs: ["entry", "kpi", "logs", "all"],
+    allowedTabs: ["entry", "kpi", "3d", "logs", "all"],
     canExport: true,
     canManageSettings: false,
     themeColor: "blue"
@@ -3638,7 +3638,7 @@ const DEFAULT_USER_ACCOUNTS = {
     passwordHash: "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9",
     role: "ADMIN",
     displayName: "Plant IT Admin",
-    allowedTabs: ["entry", "kpi", "logs", "all", "settings"],
+    allowedTabs: ["entry", "kpi", "3d", "logs", "all", "settings"],
     canExport: true,
     canManageSettings: true,
     themeColor: "red"
@@ -3664,8 +3664,11 @@ function getCurrentUser() {
     try {
       const u = JSON.parse(userJson);
       if (u && u.username && u.role) {
-        if (!u.allowedTabs) {
-          u.allowedTabs = u.role === "OPERATOR" ? ["entry"] : (u.role === "SUPERVISOR" ? ["entry", "kpi", "logs", "all"] : ["entry", "kpi", "logs", "all", "settings"]);
+        if (!u.allowedTabs || (!u.allowedTabs.includes("3d") && u.role !== "OPERATOR")) {
+          u.allowedTabs = u.role === "OPERATOR" ? ["entry"] : (u.role === "SUPERVISOR" ? ["entry", "kpi", "3d", "logs", "all"] : ["entry", "kpi", "3d", "logs", "all", "settings"]);
+          try {
+            localStorage.setItem("YOKOHAMA_CURRENT_USER", JSON.stringify(u));
+          } catch (e) {}
         }
         return u;
       }
@@ -3717,6 +3720,13 @@ window.switchTab = function(tabName) {
     return;
   }
 
+  // Suspend 3D render loop when navigating away from 3D tab
+  if (typeof activeTab !== "undefined" && activeTab === '3d' && tabName !== '3d') {
+    if (window.Yokohama3DDashboard && typeof window.Yokohama3DDashboard.onTabLeave === 'function') {
+      window.Yokohama3DDashboard.onTabLeave();
+    }
+  }
+
   activeTab = tabName;
   try {
     localStorage.setItem("YOKOHAMA_ACTIVE_TAB", tabName);
@@ -3732,6 +3742,13 @@ window.switchTab = function(tabName) {
       renderCharts();
     }, 50);
   }
+  if (tabName === '3d') {
+    setTimeout(() => {
+      if (window.Yokohama3DDashboard && typeof window.Yokohama3DDashboard.init === 'function') {
+        window.Yokohama3DDashboard.init();
+      }
+    }, 30);
+  }
   if (tabName === 'logs' || tabName === 'all') {
     renderRecordsTable();
   }
@@ -3743,19 +3760,26 @@ window.switchTab = function(tabName) {
 function updateTabButtonsUI(tabName) {
   const btnEntry = document.getElementById("tabBtnEntry");
   const btnKpi = document.getElementById("tabBtnKpi");
+  const btn3D = document.getElementById("tabBtn3D");
   const btnLogs = document.getElementById("tabBtnLogs");
   const btnAll = document.getElementById("tabBtnAll");
   const btnSettings = document.getElementById("tabBtnSettings");
+  const user = getCurrentUser();
 
-  [btnEntry, btnKpi, btnLogs, btnAll, btnSettings].forEach(btn => {
-    if (btn) btn.className = "tab-btn text-xs";
-  });
+  const setBtnClass = (btn, tabKey, activeClass) => {
+    if (!btn) return;
+    const isAllowed = !user || (user.allowedTabs && user.allowedTabs.includes(tabKey));
+    const isHidden = !isAllowed;
+    const isActive = tabName === tabKey;
+    btn.className = `tab-btn text-xs ${isActive ? activeClass : ''} ${isHidden ? 'hidden' : ''}`.trim();
+  };
 
-  if (tabName === 'entry' && btnEntry) btnEntry.className = "tab-btn active-tab-red text-xs";
-  else if (tabName === 'kpi' && btnKpi) btnKpi.className = "tab-btn active-tab text-xs";
-  else if (tabName === 'logs' && btnLogs) btnLogs.className = "tab-btn active-tab text-xs";
-  else if (tabName === 'all' && btnAll) btnAll.className = "tab-btn active-tab text-xs";
-  else if (tabName === 'settings' && btnSettings) btnSettings.className = "tab-btn active-tab-red text-xs";
+  setBtnClass(btnEntry, 'entry', 'active-tab-red');
+  setBtnClass(btnKpi, 'kpi', 'active-tab');
+  setBtnClass(btn3D, '3d', 'active-tab-red');
+  setBtnClass(btnLogs, 'logs', 'active-tab');
+  setBtnClass(btnAll, 'all', 'active-tab');
+  setBtnClass(btnSettings, 'settings', 'active-tab-red');
 }
 
 function updateViewsVisibility(tabName, user) {
@@ -3763,6 +3787,7 @@ function updateViewsVisibility(tabName, user) {
   const appContainer = document.getElementById("downtimeAppContainer");
   const viewEntry = document.getElementById("viewEntryContainer");
   const viewKpi = document.getElementById("analytics-section");
+  const view3D = document.getElementById("view3dContainer");
   const viewLogs = document.getElementById("table-section");
   const viewSettings = document.getElementById("viewSettingsContainer");
   const lockedBanner = document.getElementById("adminLockedBanner");
@@ -3784,6 +3809,7 @@ function updateViewsVisibility(tabName, user) {
   // Hide all views first
   if (viewEntry) viewEntry.classList.add("hidden");
   if (viewKpi) viewKpi.classList.add("hidden");
+  if (view3D) view3D.classList.add("hidden");
   if (viewLogs) viewLogs.classList.add("hidden");
   if (viewSettings) viewSettings.classList.add("hidden");
 
@@ -3791,6 +3817,8 @@ function updateViewsVisibility(tabName, user) {
     if (viewEntry) viewEntry.classList.remove("hidden");
   } else if (tabName === 'kpi') {
     if (viewKpi) viewKpi.classList.remove("hidden");
+  } else if (tabName === '3d') {
+    if (view3D) view3D.classList.remove("hidden");
   } else if (tabName === 'logs') {
     if (viewLogs) viewLogs.classList.remove("hidden");
   } else if (tabName === 'all') {
@@ -3917,7 +3945,7 @@ function initAuthSystem() {
                   canExport: acc.canExport !== false,
                   canManageSettings: acc.canManageSettings === true,
                   themeColor: acc.themeColor || "red",
-                  allowedTabs: acc.allowedTabs || (acc.role === "OPERATOR" ? ["entry"] : (acc.role === "SUPERVISOR" ? ["entry", "kpi", "logs", "all"] : ["entry", "kpi", "logs", "all", "settings"]))
+                  allowedTabs: acc.allowedTabs || (acc.role === "OPERATOR" ? ["entry"] : (acc.role === "SUPERVISOR" ? ["entry", "kpi", "3d", "logs", "all"] : ["entry", "kpi", "3d", "logs", "all", "settings"]))
                 };
                 break;
               }
@@ -3960,6 +3988,7 @@ function updateAuthUI(currentUser) {
 
   const tabBtnEntry = document.getElementById("tabBtnEntry");
   const tabBtnKpi = document.getElementById("tabBtnKpi");
+  const tabBtn3D = document.getElementById("tabBtn3D");
   const tabBtnLogs = document.getElementById("tabBtnLogs");
   const tabBtnAll = document.getElementById("tabBtnAll");
   const tabBtnSettings = document.getElementById("tabBtnSettings");
@@ -3976,6 +4005,10 @@ function updateAuthUI(currentUser) {
     if (tabBtnKpi) {
       if (currentUser.allowedTabs.includes("kpi")) tabBtnKpi.classList.remove("hidden");
       else tabBtnKpi.classList.add("hidden");
+    }
+    if (tabBtn3D) {
+      if (currentUser.allowedTabs.includes("3d")) tabBtn3D.classList.remove("hidden");
+      else tabBtn3D.classList.add("hidden");
     }
     if (tabBtnLogs) {
       if (currentUser.allowedTabs.includes("logs")) tabBtnLogs.classList.remove("hidden");
@@ -8303,6 +8336,11 @@ function renderKPIs() {
   if (elMttr) elMttr.textContent = mttrText;
   if (elResolutionRate) elResolutionRate.textContent = resolutionRateText;
   if (elTotalIncidents) elTotalIncidents.textContent = `${records.length} Incidents (${badgeText})`;
+
+  // Synchronize 3D Visualizer & Digital Twin data with active filters
+  if (window.Yokohama3DDashboard && typeof window.Yokohama3DDashboard.onFilterChange === "function") {
+    window.Yokohama3DDashboard.onFilterChange();
+  }
 }
 window.renderKPIs = renderKPIs;
 

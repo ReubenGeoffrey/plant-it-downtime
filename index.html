@@ -173,6 +173,9 @@
           <button id="tabBtnKpi" type="button" onclick="switchTab('kpi')" class="tab-btn text-xs">
             <i class="fa-solid fa-chart-pie mr-1.5"></i> Dashboard
           </button>
+          <button id="tabBtn3D" type="button" onclick="switchTab('3d')" class="tab-btn text-xs hidden" title="Interactive 3D Digital Twin & Bar Charts">
+            <i class="fa-solid fa-cube text-[#E60012] mr-1.5"></i> 3D Dashboard
+          </button>
           <button id="tabBtnLogs" type="button" onclick="switchTab('logs')" class="tab-btn text-xs">
             <i class="fa-solid fa-table-list mr-1.5"></i> Incident Records
           </button>
@@ -1480,6 +1483,194 @@
 
     </section>
 
+    <!-- =========================================================================
+         SECTION: 3D DIGITAL TWIN & ADVANCED BAR CHARTS STUDIO (RBAC: ADMIN & SUPERVISOR)
+         Build by Hadssha Bell S & Reuben Geoffrey
+         ========================================================================= -->
+    <section id="view3dContainer" class="hidden space-y-6">
+
+      <!-- Top Studio Card -->
+      <div class="card-modern p-5 bg-slate-900 border border-slate-800 text-white shadow-xl relative overflow-hidden">
+        <div class="absolute -top-12 -right-12 w-48 h-48 bg-red-600/10 rounded-full blur-3xl pointer-events-none"></div>
+
+        <!-- Header Row -->
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+          <div>
+            <div class="flex items-center gap-2.5">
+              <span class="inline-block w-2.5 h-6 bg-[#E60012] rounded-sm"></span>
+              <h3 class="text-xl font-black text-white tracking-tight uppercase flex items-center gap-2">
+                <i class="fa-solid fa-cube text-[#E60012]"></i>
+                <span>3D Visualizer & Digital Twin Studio</span>
+              </h3>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-red-950/80 text-red-300 border border-red-800/80">
+                PRO 3D
+              </span>
+            </div>
+            <p id="chart3dDescription" class="text-xs text-slate-400 mt-1 leading-relaxed">
+              Interactive 3D beveled bars with continuous threshold coloring (≥99% Good, 95-&lt;99% Warning, &lt;95% Critical).
+            </p>
+          </div>
+
+          <!-- Quick Actions & Author Attribution -->
+          <div class="flex items-center gap-3 flex-wrap">
+            <span class="text-[11px] font-mono text-slate-400 bg-slate-800/80 px-2.5 py-1 rounded-md border border-slate-700/60 flex items-center gap-1.5">
+              <i class="fa-solid fa-code text-[#E60012]"></i>
+              <span>Build by Hadssha Bell S &amp; Reuben Geoffrey</span>
+            </span>
+            <button type="button" onclick="switchTab('kpi')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center gap-1.5 cursor-pointer">
+              <i class="fa-solid fa-chart-pie text-sky-400"></i>
+              <span>2D Dashboard</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Row 1: Chart Switcher Buttons -->
+        <div class="pt-4 flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin">
+          <button type="button" data-chart="area" class="chart-switch-btn px-3 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 border whitespace-nowrap bg-[#E60012] text-white border-[#E60012] cursor-pointer">
+            <i class="fa-solid fa-chart-simple"></i>
+            <span>Area Downtime</span>
+          </button>
+          <button type="button" data-chart="process" class="chart-switch-btn px-3 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 border whitespace-nowrap bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700 cursor-pointer">
+            <i class="fa-solid fa-diagram-project"></i>
+            <span>Process Grouped</span>
+          </button>
+          <button type="button" data-chart="monthly" class="chart-switch-btn px-3 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 border whitespace-nowrap bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700 cursor-pointer">
+            <i class="fa-solid fa-bullseye text-emerald-400"></i>
+            <span>Monthly (99% Target)</span>
+          </button>
+          <button type="button" data-chart="category" class="chart-switch-btn px-3 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 border whitespace-nowrap bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700 cursor-pointer">
+            <i class="fa-solid fa-chart-pie text-violet-400"></i>
+            <span>Category Donut</span>
+          </button>
+          <button type="button" data-chart="trajectory" class="chart-switch-btn px-3 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 border whitespace-nowrap bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700 cursor-pointer">
+            <i class="fa-solid fa-arrow-trend-up text-amber-400"></i>
+            <span>Asset Trajectory</span>
+          </button>
+          <button type="button" data-chart="plantMap" class="chart-switch-btn px-3 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 border whitespace-nowrap bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700 cursor-pointer">
+            <i class="fa-solid fa-industry text-sky-400"></i>
+            <span>Plant Digital Twin</span>
+          </button>
+        </div>
+
+        <!-- Row 2: Active Filters Mirror & Viewport Controls -->
+        <div class="mt-3 pt-3 border-t border-slate-800/80 flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <!-- Filter Chips -->
+          <div id="filterChips3dContainer" class="flex items-center gap-2 flex-wrap">
+            <!-- Dynamically populated by Dashboard3D.js -->
+          </div>
+
+          <!-- Utility Actions Toolbar -->
+          <div class="flex items-center gap-2 flex-wrap justify-end">
+            <!-- Digital Twin Tour -->
+            <button type="button" id="btnToggleDigitalTwin" class="px-2.5 py-1.5 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center gap-1.5 cursor-pointer" title="Auto fly-through touring all plant sectors">
+              <i class="fa-solid fa-play text-emerald-400 text-[11px]"></i>
+              <span>Digital Twin Tour</span>
+            </button>
+
+            <!-- Quality Preset Selector -->
+            <div class="flex items-center gap-1.5 bg-slate-800/80 px-2 py-1 rounded-lg border border-slate-700">
+              <span class="text-[10px] uppercase font-bold text-slate-400">Graphics:</span>
+              <select id="select3dQuality" class="bg-transparent text-slate-200 text-xs font-medium focus:outline-none cursor-pointer">
+                <option value="auto" class="bg-slate-900 text-slate-200">Auto (Adaptive)</option>
+                <option value="high" class="bg-slate-900 text-slate-200">High (Soft Shadows)</option>
+                <option value="low" class="bg-slate-900 text-slate-200">Low (High Perf)</option>
+              </select>
+            </div>
+
+            <!-- FPS Badge -->
+            <span id="badge3dFps" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-950/80 text-emerald-400 border border-emerald-800">
+              60 FPS
+            </span>
+
+            <!-- Reset View -->
+            <button type="button" id="btn3dResetCamera" class="px-2.5 py-1.5 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center gap-1.5 cursor-pointer" title="Reset camera to initial viewpoint">
+              <i class="fa-solid fa-arrows-rotate text-slate-400 text-[11px]"></i>
+              <span class="hidden sm:inline">Reset</span>
+            </button>
+
+            <!-- Export PNG Screenshot -->
+            <button type="button" id="btn3dScreenshot" class="px-2.5 py-1.5 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center gap-1.5 cursor-pointer" title="Save high-resolution PNG image">
+              <i class="fa-solid fa-camera text-sky-400 text-[11px]"></i>
+              <span class="hidden sm:inline">PNG</span>
+            </button>
+
+            <!-- Fullscreen -->
+            <button type="button" id="btn3dFullscreen" class="px-2.5 py-1.5 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center gap-1.5 cursor-pointer" title="Expand viewport to full screen">
+              <i class="fa-solid fa-expand text-slate-400 text-[11px]"></i>
+            </button>
+
+            <!-- Accessible Table Toggle -->
+            <button type="button" id="btnToggleTableView" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center gap-1.5 cursor-pointer" title="Toggle between 3D canvas and accessible tabular data">
+              <i class="fa-solid fa-table text-amber-400"></i>
+              <span>View as Table</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main 3D Viewport Box -->
+      <div id="viewport3dMain" class="relative w-full h-[580px] sm:h-[650px] lg:h-[720px] bg-slate-950 rounded-xl overflow-hidden border border-slate-800 shadow-2xl">
+        
+        <!-- Active Chart Title Floating Pill -->
+        <div class="absolute top-4 left-4 z-10 pointer-events-none">
+          <div class="bg-slate-900/85 backdrop-blur-md px-3.5 py-2 rounded-lg border border-slate-700/80 shadow-lg">
+            <h4 id="chart3dTitle" class="text-xs sm:text-sm font-bold text-white tracking-wide">
+              Area-wise Downtime &amp; Operational Availability
+            </h4>
+          </div>
+        </div>
+
+        <!-- Continuous Threshold Status Legend -->
+        <div class="absolute top-4 right-4 z-10 pointer-events-none hidden sm:block">
+          <div class="bg-slate-900/85 backdrop-blur-md px-3 py-2 rounded-lg border border-slate-700/80 shadow-lg flex items-center gap-3 text-[11px] font-mono">
+            <span class="flex items-center gap-1.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.7)]"></span>
+              <span class="text-emerald-400 font-bold">&ge;99.0%</span>
+            </span>
+            <span class="flex items-center gap-1.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.7)]"></span>
+              <span class="text-amber-400 font-bold">95-&lt;99%</span>
+            </span>
+            <span class="flex items-center gap-1.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.7)]"></span>
+              <span class="text-red-400 font-bold">&lt;95.0%</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- 3D Canvas -->
+        <canvas id="canvas3dMain" class="w-full h-full block outline-none cursor-grab active:cursor-grabbing"></canvas>
+
+        <!-- Navigation Controls Hint (Bottom Left) -->
+        <div class="absolute bottom-3 left-3 z-10 pointer-events-none">
+          <div class="bg-slate-900/80 backdrop-blur-xs px-3 py-1.5 rounded-md border border-slate-800 text-[10px] text-slate-400 font-mono flex items-center gap-2">
+            <span><i class="fa-regular fa-hand text-slate-500 mr-1"></i> Drag: Rotate</span>
+            <span class="text-slate-600">|</span>
+            <span><i class="fa-solid fa-arrows-up-down-left-right text-slate-500 mr-1"></i> Shift+Drag: Pan</span>
+            <span class="text-slate-600">|</span>
+            <span><i class="fa-solid fa-magnifying-glass-plus text-slate-500 mr-1"></i> Scroll: Zoom</span>
+            <span class="text-slate-600">|</span>
+            <span class="hidden md:inline"><i class="fa-solid fa-hand-pointer text-slate-500 mr-1"></i> Click: Filter</span>
+          </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div id="loader3dSpinner" class="absolute inset-0 bg-slate-950/80 backdrop-blur-xs flex flex-col items-center justify-center gap-3 z-20">
+          <div class="w-10 h-10 border-3 border-[#E60012] border-t-transparent rounded-full animate-spin"></div>
+          <span class="text-xs font-bold text-slate-300 tracking-wider uppercase font-mono">
+            Loading 3D Engine &amp; Visuals...
+          </span>
+        </div>
+
+      </div>
+
+      <!-- Accessible Semantic HTML Table Alternative -->
+      <div id="table3dAlternative" class="hidden space-y-4">
+        <!-- Rendered dynamically by Dashboard3D.js -->
+      </div>
+
+    </section>
+
 
     <!-- =========================================================================
          SECTION 3: INCIDENT RECORDS LOG & INTERACTIVE TABLE
@@ -2510,6 +2701,15 @@
   <script src="app.js?v=5.4"></script>
   <!-- Enterprise Observability & Advanced Visualizations Engine -->
   <script src="observability-dashboard.js?v=1.0"></script>
+
+  <!-- Yokohama 3D Visualizer & Digital Twin Engine -->
+  <script src="3d/theme.js"></script>
+  <script src="3d/dataAdapter.js"></script>
+  <script src="3d/Scene.js"></script>
+  <script src="3d/BarChart3D.js"></script>
+  <script src="3d/PlantMap3D.js"></script>
+  <script src="3d/Interaction.js"></script>
+  <script src="3d/Dashboard3D.js"></script>
 
   <!-- =========================================================================
        MODAL: EXPORT REPORT BY DATE OR MONTH (EXECUTIVE EXCEL & CSV)
