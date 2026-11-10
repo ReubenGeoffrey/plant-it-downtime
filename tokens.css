@@ -1,0 +1,459 @@
+/* ==========================================================================
+   YOKOHAMA OBSERVABILITY DESIGN SYSTEM - DESIGN TOKENS
+   Enterprise Observability & Fintech-Grade Telemetry Palette
+   Includes: Light, Dark, and Control-Room Wall Display Themes
+   Accessibility: WCAG 2.2 AA Contrast & Color-Blind Safe Encoding
+   ========================================================================== */
+
+:root {
+  /* --- Brand Primitives --- */
+  --yoko-red: #E60012;
+  --yoko-red-hover: #CC0010;
+  --yoko-red-subtle: rgba(230, 0, 18, 0.08);
+  --yoko-red-glow: rgba(230, 0, 18, 0.25);
+  --yoko-pitch-black: #0A0D14;
+  --yoko-deep-slate: #0F172A;
+
+  /* --- Light Theme (Default) --- */
+  --bg-app: #F8FAFC;
+  --bg-canvas: #FFFFFF;
+  --bg-card: #FFFFFF;
+  --bg-card-subtle: #F8FAFC;
+  --bg-card-elevated: #FFFFFF;
+  --bg-surface-hover: #F1F5F9;
+  --bg-surface-active: #E2E8F0;
+  --bg-input: #FFFFFF;
+  --bg-header: #0F172A;
+  
+  --border-subtle: #F1F5F9;
+  --border-card: #E2E8F0;
+  --border-card-hover: #CBD5E1;
+  --border-focus: #E60012;
+
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #64748B;
+  --text-faint: #94A3B8;
+  --text-inverse: #FFFFFF;
+
+  /* --- Status Tokens (Color-Blind Safe) --- */
+  --status-optimal: #059669;
+  --status-optimal-bg: #ECFDF5;
+  --status-optimal-border: #A7F3D0;
+  --status-optimal-glow: rgba(5, 150, 105, 0.25);
+
+  --status-warning: #D97706;
+  --status-warning-bg: #FFFBEB;
+  --status-warning-border: #FDE68A;
+  --status-warning-glow: rgba(217, 119, 6, 0.25);
+
+  --status-critical: #DC2626;
+  --status-critical-bg: #FEF2F2;
+  --status-critical-border: #FECACA;
+  --status-critical-glow: rgba(220, 38, 38, 0.3);
+
+  --status-info: #0284C7;
+  --status-info-bg: #F0F9FF;
+  --status-info-border: #BAE6FD;
+
+  /* --- Series Palette (Accessible for Data Visualizations) --- */
+  --series-1: #E60012; /* Yokohama Red */
+  --series-2: #2563EB; /* Royal Blue */
+  --series-3: #0D9488; /* Teal */
+  --series-4: #D97706; /* Amber */
+  --series-5: #7C3AED; /* Purple */
+  --series-6: #DB2777; /* Pink */
+  --series-7: #475569; /* Slate */
+  --series-8: #059669; /* Emerald */
+  --series-9: #EA580C; /* Orange */
+  --series-10: #4F46E5; /* Indigo */
+
+  /* --- Spacing Scale --- */
+  --space-0-5: 0.125rem; /* 2px */
+  --space-1: 0.25rem;    /* 4px */
+  --space-1-5: 0.375rem; /* 6px */
+  --space-2: 0.5rem;     /* 8px */
+  --space-2-5: 0.625rem; /* 10px */
+  --space-3: 0.75rem;    /* 12px */
+  --space-4: 1rem;       /* 16px */
+  --space-5: 1.25rem;    /* 20px */
+  --space-6: 1.5rem;     /* 24px */
+  --space-8: 2rem;       /* 32px */
+  --space-10: 2.5rem;    /* 40px */
+  --space-12: 3rem;      /* 48px */
+
+  /* --- Border Radius Scale --- */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
+
+  /* --- Elevation & Shadows --- */
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+  --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+  --shadow-card-hover: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.03);
+  --shadow-dropdown: 0 12px 28px -4px rgba(15, 23, 42, 0.14), 0 4px 10px -2px rgba(15, 23, 42, 0.06);
+  --shadow-modal: 0 24px 48px -8px rgba(15, 23, 42, 0.25), 0 12px 24px -4px rgba(15, 23, 42, 0.1);
+
+  /* --- Typography & Numerals --- */
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
+  --font-tabular: tabular-nums lining-nums;
+
+  /* --- Motion & Transitions --- */
+  --motion-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --motion-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --motion-smooth: 400ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ==========================================================================
+   DARK THEME TOKENS
+   ========================================================================== */
+[data-theme="dark"] {
+  --bg-app: #080B11;
+  --bg-canvas: #0F1420;
+  --bg-card: #0F1420;
+  --bg-card-subtle: #141A29;
+  --bg-card-elevated: #182032;
+  --bg-surface-hover: #1A2338;
+  --bg-surface-active: #232E48;
+  --bg-input: #101624;
+  --bg-header: #080B11;
+
+  --border-subtle: #161E30;
+  --border-card: #1F293D;
+  --border-card-hover: #334155;
+  --border-focus: #E60012;
+
+  --text-primary: #F1F5F9;
+  --text-secondary: #CBD5E1;
+  --text-muted: #94A3B8;
+  --text-faint: #64748B;
+  --text-inverse: #0F172A;
+
+  --status-optimal: #10B981;
+  --status-optimal-bg: rgba(16, 185, 129, 0.12);
+  --status-optimal-border: rgba(16, 185, 129, 0.3);
+
+  --status-warning: #F59E0B;
+  --status-warning-bg: rgba(245, 158, 11, 0.12);
+  --status-warning-border: rgba(245, 158, 11, 0.3);
+
+  --status-critical: #EF4444;
+  --status-critical-bg: rgba(239, 68, 68, 0.15);
+  --status-critical-border: rgba(239, 68, 68, 0.35);
+
+  --status-info: #38BDF8;
+  --status-info-bg: rgba(56, 189, 248, 0.12);
+  --status-info-border: rgba(56, 189, 248, 0.3);
+
+  --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.4);
+  --shadow-card-hover: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(230, 0, 18, 0.1);
+  --shadow-dropdown: 0 16px 32px rgba(0, 0, 0, 0.6);
+  --shadow-modal: 0 25px 50px -12px rgba(0, 0, 0, 0.85);
+}
+
+/* ==========================================================================
+   CONTROL ROOM (WALL DISPLAY) THEME TOKENS
+   Maximum contrast, high-density, auto-rotating display styling
+   ========================================================================== */
+[data-theme="control-room"] {
+  --bg-app: #000000;
+  --bg-canvas: #05070B;
+  --bg-card: #080C14;
+  --bg-card-subtle: #0E1320;
+  --bg-card-elevated: #121828;
+  --bg-surface-hover: #172036;
+  --bg-surface-active: #1F2B48;
+  --bg-input: #080C14;
+  --bg-header: #000000;
+
+  --border-subtle: #121828;
+  --border-card: #20293F;
+  --border-card-hover: #E60012;
+  --border-focus: #E60012;
+
+  --text-primary: #FFFFFF;
+  --text-secondary: #E2E8F0;
+  --text-muted: #94A3B8;
+  --text-faint: #64748B;
+
+  --status-optimal: #00E676;
+  --status-optimal-bg: rgba(0, 230, 118, 0.15);
+  --status-optimal-border: #00E676;
+
+  --status-warning: #FFD600;
+  --status-warning-bg: rgba(255, 214, 0, 0.15);
+  --status-warning-border: #FFD600;
+
+  --status-critical: #FF1744;
+  --status-critical-bg: rgba(255, 23, 68, 0.2);
+  --status-critical-border: #FF1744;
+}
+
+/* ==========================================================================
+   ACCESSIBILITY & MOTION PREFERENCES
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.001s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001s !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Tabular figures for high-precision telemetry numbers */
+.tabular-nums, .font-mono, [data-metric-val] {
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: -0.015em;
+}
+
+/* Color-Blind Safe Indicator Badges */
+.badge-status-optimal {
+  background-color: var(--status-optimal-bg);
+  color: var(--status-optimal);
+  border: 1px solid var(--status-optimal-border);
+}
+.badge-status-warning {
+  background-color: var(--status-warning-bg);
+  color: var(--status-warning);
+  border: 1px solid var(--status-warning-border);
+}
+.badge-status-critical {
+  background-color: var(--status-critical-bg);
+  color: var(--status-critical);
+  border: 1px solid var(--status-critical-border);
+}
+
+/* Interactive Card Styles with subtle depth */
+.obs-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  transition: border-color var(--motion-base), box-shadow var(--motion-base), transform var(--motion-base);
+  position: relative;
+}
+
+.obs-card:hover {
+  border-color: var(--border-card-hover);
+  box-shadow: var(--shadow-card-hover);
+}
+
+.obs-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.875rem 1.125rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.obs-card-body {
+  padding: 1.125rem;
+}
+
+/* KPI Card Sparkline & Target Ring */
+.kpi-sparkline-canvas {
+  width: 100%;
+  height: 38px;
+  display: block;
+}
+
+.kpi-delta-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 0.125rem 0.375rem;
+  border-radius: var(--radius-xs);
+  font-variant-numeric: tabular-nums;
+}
+.kpi-delta-good {
+  background-color: var(--status-optimal-bg);
+  color: var(--status-optimal);
+  border: 1px solid var(--status-optimal-border);
+}
+.kpi-delta-bad {
+  background-color: var(--status-critical-bg);
+  color: var(--status-critical);
+  border: 1px solid var(--status-critical-border);
+}
+.kpi-delta-neutral {
+  background-color: var(--bg-surface-hover);
+  color: var(--text-muted);
+  border: 1px solid var(--border-subtle);
+}
+
+/* Skeleton Loading Shimmer */
+.skeleton-shimmer {
+  background: linear-gradient(90deg, rgba(226, 232, 240, 0.4) 0%, rgba(226, 232, 240, 0.8) 50%, rgba(226, 232, 240, 0.4) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-xs);
+}
+[data-theme="dark"] .skeleton-shimmer {
+  background: linear-gradient(90deg, rgba(31, 41, 61, 0.4) 0%, rgba(31, 41, 61, 0.9) 50%, rgba(31, 41, 61, 0.4) 100%);
+  background-size: 200% 100%;
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Command Palette Overlay */
+.cmd-palette-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(10, 14, 23, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 15vh;
+}
+.cmd-palette-modal {
+  width: 100%;
+  max-width: 620px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-modal);
+  overflow: hidden;
+}
+
+/* Sticky Filter Bar */
+.sticky-filter-bar {
+  position: sticky;
+  top: 68px;
+  z-index: 30;
+  background-color: var(--bg-canvas);
+  border-bottom: 1px solid var(--border-card);
+  backdrop-filter: blur(12px);
+  transition: background-color var(--motion-base), border-color var(--motion-base);
+}
+
+/* ==========================================================================
+   ADVANCED MODULES: HEATMAP, GANTT, 3D STUDIO & RANGE BRUSH
+   ========================================================================== */
+.heatmap-cell {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-xs);
+  transition: transform var(--motion-fast), outline var(--motion-fast);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+.heatmap-cell:hover {
+  transform: scale(1.25);
+  z-index: 10;
+  outline: 2px solid var(--yoko-red);
+}
+
+.gantt-bar-item {
+  height: 20px;
+  border-radius: 4px;
+  position: absolute;
+  cursor: pointer;
+  transition: opacity var(--motion-fast), transform var(--motion-fast), box-shadow var(--motion-fast);
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: #FFFFFF;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.gantt-bar-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
+  z-index: 20;
+}
+.gantt-bar-extending {
+  animation: ganttPulse 2s infinite ease-in-out;
+  border: 1px dashed rgba(255, 255, 255, 0.7);
+}
+@keyframes ganttPulse {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 1; filter: brightness(1.25); }
+}
+
+/* 3D Visualizer Studio Canvas */
+.canvas-3d-container {
+  position: relative;
+  width: 100%;
+  height: 440px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 30%, #1E293B 0%, #0F172A 100%);
+  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+[data-theme="dark"] .canvas-3d-container {
+  background: radial-gradient(circle at 50% 30%, #111827 0%, #030712 100%);
+}
+[data-theme="control-room"] .canvas-3d-container {
+  background: radial-gradient(circle at 50% 30%, #0B1120 0%, #000000 100%);
+}
+.canvas-3d-overlay {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 10;
+  pointer-events: none;
+}
+.canvas-3d-controls {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+}
+
+/* Range Brush / Zoom Slider */
+.range-brush-slider {
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  background: var(--border-card);
+  border-radius: 9999px;
+  outline: none;
+  transition: background var(--motion-fast);
+}
+.range-brush-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--yoko-red);
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(230, 0, 18, 0.4);
+  transition: transform var(--motion-fast);
+}
+.range-brush-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.25);
+}
+
+/* Print Friendly Overrides */
+@media print {
+  .sticky-filter-bar, nav, button, .cmd-palette-backdrop {
+    display: none !important;
+  }
+  body, .obs-card {
+    background: #FFF !important;
+    color: #000 !important;
+    box-shadow: none !important;
+    border: 1px solid #CCC !important;
+  }
+}

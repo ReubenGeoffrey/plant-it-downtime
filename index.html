@@ -17,6 +17,9 @@
   <!-- Chart.js for Live Plant Analytics -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
+  <!-- Three.js for 3D Visualizer Studio (Local with CDN fallback) -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  
   <!-- ExcelJS & FileSaver for Rich Premium Styled Excel Export (Local with CDN fallback) -->
   <script src="exceljs.min.js"></script>
   <script src="FileSaver.min.js"></script>
@@ -41,7 +44,8 @@
   </script>
   <script src="supabase-client.js?v=2.3"></script>
   
-  <!-- Custom Yokohama Theme Stylesheet -->
+  <!-- Custom Yokohama Theme Stylesheet & Observability Design Tokens -->
+  <link rel="stylesheet" href="tokens.css?v=1.0">
   <link rel="stylesheet" href="styles.css?v=2.2">
   
   <!-- Favicon with new Yokohama Logo -->
@@ -520,22 +524,79 @@
          ========================================================================= -->
     <section id="analytics-section" class="space-y-6">
       
-      <!-- Section Header & Filter Toolbar matching sketch: SD, ED, Month, Year -->
-      <div class="card-modern p-5 bg-white border border-slate-200 shadow-sm">
-        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <!-- Section Header & Observability Toolbar -->
+      <div class="card-modern p-4 sm:p-5 bg-white border border-slate-200 shadow-xs">
+        <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
           
           <div class="flex items-center gap-3">
             <span class="inline-block w-2.5 h-8 bg-[#E60012] rounded-sm"></span>
             <div>
-              <h3 class="text-base font-black text-slate-900 tracking-tight uppercase flex items-center gap-2">
-                <span>DASHBOARD</span>
-              </h3>
-              
+              <div class="flex items-center gap-2">
+                <h3 class="text-base font-black text-slate-900 tracking-tight uppercase">OPERATIONAL OBSERVABILITY DASHBOARD</h3>
+                <span id="activePresetBadge" class="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-slate-900 text-white font-mono">Preset: EXECUTIVE</span>
+              </div>
+              <p class="text-xs text-slate-500 mt-0.5 font-medium">Real-time plant IT reliability, downtime telemetry & failure forensics</p>
             </div>
           </div>
 
-          <!-- Filter Toolbar matching notebook sketch: From, To, Month, Year -->
-          <div class="flex flex-wrap items-center gap-2.5">
+          <!-- Observability Toolbar: Presets, Theme & Command Palette -->
+          <div class="flex flex-wrap items-center gap-2">
+            
+            <!-- Quick View Presets -->
+            <div class="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-50 text-xs">
+              <button type="button" onclick="setViewPreset('executive')" data-preset="executive" class="view-preset-btn px-2.5 py-1 rounded-md font-bold transition-all bg-slate-900 text-white shadow-xs">Executive</button>
+              <button type="button" onclick="setViewPreset('operations')" data-preset="operations" class="view-preset-btn px-2.5 py-1 rounded-md font-bold transition-all bg-white text-slate-600 hover:text-slate-900">Operations</button>
+              <button type="button" onclick="setViewPreset('maintenance')" data-preset="maintenance" class="view-preset-btn px-2.5 py-1 rounded-md font-bold transition-all bg-white text-slate-600 hover:text-slate-900">Maintenance</button>
+            </div>
+
+            <!-- Command Palette Shortcut Button (Ctrl+K) -->
+            <button type="button" onclick="openCommandPalette()" class="px-2.5 py-1.5 text-xs font-bold rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition-all flex items-center gap-1.5 shadow-xs cursor-pointer" title="Open Global Command Palette (Ctrl+K)">
+              <i class="fa-solid fa-terminal text-slate-400 text-xs"></i>
+              <span class="font-mono text-[11px] bg-slate-100 px-1 rounded border border-slate-200">Ctrl&nbsp;K</span>
+            </button>
+
+            <!-- Theme Switcher: Light / Dark / Wall Display -->
+            <div class="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-50 text-xs">
+              <button type="button" onclick="setObsTheme('light')" data-theme-val="light" class="theme-toggle-btn p-1.5 rounded-md text-xs font-bold transition-all bg-[#E60012] text-white" title="Light Theme">
+                <i class="fa-solid fa-sun"></i>
+              </button>
+              <button type="button" onclick="setObsTheme('dark')" data-theme-val="dark" class="theme-toggle-btn p-1.5 rounded-md text-xs font-bold transition-all text-slate-400 hover:text-slate-700" title="Dark Observability Theme">
+                <i class="fa-solid fa-moon"></i>
+              </button>
+              <button type="button" onclick="setObsTheme('control-room')" data-theme-val="control-room" class="theme-toggle-btn p-1.5 rounded-md text-xs font-bold transition-all text-slate-400 hover:text-slate-700" title="Control Room (Wall Display)">
+                <i class="fa-solid fa-desktop"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Plant Operational Status Strip -->
+        <div id="liveStatusStrip" class="mt-3 py-2 px-3.5 rounded-xl bg-slate-900 text-white flex flex-wrap items-center justify-between gap-3 text-xs border border-slate-800 shadow-inner">
+          <div class="flex items-center gap-3">
+            <span class="flex items-center gap-1.5 font-bold font-mono">
+              <span id="liveStatusPulseDot" class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span id="liveStatusText" class="text-emerald-400 uppercase tracking-wider text-[11px]">OPTIMAL OPERATION</span>
+            </span>
+            <span class="text-slate-600">|</span>
+            <span class="text-slate-300 text-[11px] font-mono">
+              Active Outages: <strong id="liveActiveOutagesCount" class="text-white font-bold">0</strong>
+            </span>
+            <span class="text-slate-600 hidden sm:inline">|</span>
+            <span class="text-slate-300 text-[11px] font-mono hidden sm:inline">
+              Reliability Score: <strong id="livePlantReliabilityScore" class="text-emerald-400 font-bold">98/100</strong>
+            </span>
+          </div>
+          <div class="flex items-center gap-3 text-slate-400 text-[11px] font-mono">
+            <span id="liveLastIncidentText"><i class="fa-regular fa-clock text-slate-500 mr-1"></i>Last Incident: None</span>
+            <span class="hidden md:inline text-slate-600">•</span>
+            <span class="hidden md:inline text-emerald-400 font-bold"><i class="fa-solid fa-shield-halved mr-1"></i>SLA: 96%</span>
+          </div>
+        </div>
+
+        <!-- Sticky Secondary Filter Strip -->
+        <div class="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+          
+          <div class="flex flex-wrap items-center gap-2">
             <!-- From: Start Date -->
             <div class="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs">
               <span class="font-bold text-slate-500 uppercase tracking-wider text-[10px]">From:</span>
@@ -567,79 +628,211 @@
             </div>
 
             <!-- Reset Filter Button -->
-            <button type="button" onclick="resetDashboardFilters()" class="px-2.5 py-1.5 text-xs font-bold rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-600 transition-colors flex items-center gap-1" title="Reset date filters">
+            <button type="button" onclick="resetDashboardFilters()" class="px-2.5 py-1.5 text-xs font-bold rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-600 transition-colors flex items-center gap-1 cursor-pointer" title="Reset date filters">
               <i class="fa-solid fa-rotate-left text-[10px]"></i>
               <span>Reset</span>
             </button>
+          </div>
 
+          <div class="flex items-center gap-2">
             <!-- Export Current Dashboard Month/Date Excel Button -->
-            <button type="button" onclick="exportDashboardPeriodExcel()" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-all flex items-center gap-1.5 shadow-sm border border-emerald-700 active:scale-95 cursor-pointer" title="Export Executive Excel Report for currently selected Month/Date">
+            <button type="button" onclick="exportDashboardPeriodExcel()" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-all flex items-center gap-1.5 shadow-xs border border-emerald-700 active:scale-95 cursor-pointer" title="Export Executive Excel Report for currently selected Month/Date">
               <i class="fa-solid fa-file-excel text-emerald-100 text-xs"></i>
               <span id="btnExportDashboardPeriodText">Export All Excel</span>
             </button>
 
             <!-- Incident Counter Badge -->
-            <span class="text-xs font-bold text-slate-700 bg-red-50 text-[#E60012] border border-red-200 px-2.5 py-1.5 rounded-lg font-mono" id="kpi-total-incidents">0</span>
+            <span class="text-xs font-bold text-[#E60012] bg-red-50 border border-red-200 px-2.5 py-1.5 rounded-lg font-mono tabular-nums" id="kpi-total-incidents">0</span>
+          </div>
+        </div>
+
+        <!-- Quick Date Range Presets & MoM Compare Toggle -->
+        <div class="mt-3 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2.5">
+          <div class="flex flex-wrap items-center gap-1.5 text-xs">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono mr-1">Presets:</span>
+            <button type="button" onclick="setQuickDatePreset('today')" class="preset-pill px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-[11px] transition-all">Today</button>
+            <button type="button" onclick="setQuickDatePreset('7d')" class="preset-pill px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-[11px] transition-all">7 Days</button>
+            <button type="button" onclick="setQuickDatePreset('30d')" class="preset-pill px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-[11px] transition-all">30 Days</button>
+            <button type="button" onclick="setQuickDatePreset('this-month')" class="preset-pill px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-[11px] transition-all">This Month</button>
+            <button type="button" onclick="setQuickDatePreset('last-month')" class="preset-pill px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-[11px] transition-all">Last Month</button>
+            <button type="button" onclick="setQuickDatePreset('this-fy')" class="preset-pill px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-[11px] transition-all">This FY</button>
           </div>
 
+          <!-- MoM Comparison Toggle -->
+          <label class="inline-flex items-center gap-2 cursor-pointer text-xs select-none bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200">
+            <input type="checkbox" id="toggleMoMCompare" onchange="onToggleMoMCompare(this.checked)" class="rounded text-[#E60012] focus:ring-red-500 cursor-pointer">
+            <span class="font-bold text-slate-700 text-[11px]">Compare to Prior Period</span>
+          </label>
+        </div>
+
+        <!-- Drill-down Breadcrumb & Active Filter Chips Bar -->
+        <div id="filterChipsBar" class="mt-3 pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+          <!-- Drill-down Breadcrumbs -->
+          <div class="flex items-center gap-1.5 text-xs font-mono">
+            <span class="text-slate-400 font-bold text-[10px] uppercase tracking-wider">Drill-Down:</span>
+            <button type="button" onclick="drillDownTo('plant')" class="text-slate-900 hover:text-red-600 font-bold transition-colors">Plant Operations</button>
+            <span id="bcAreaSep" class="text-slate-300 hidden">&gt;</span>
+            <button type="button" id="bcArea" onclick="drillDownTo('area')" class="text-red-600 font-bold hidden"></button>
+            <span id="bcProcessSep" class="text-slate-300 hidden">&gt;</span>
+            <button type="button" id="bcProcess" onclick="drillDownTo('process')" class="text-blue-600 font-bold hidden"></button>
+            <span id="bcMachineSep" class="text-slate-300 hidden">&gt;</span>
+            <span id="bcMachine" class="text-emerald-600 font-bold hidden"></span>
+            <button type="button" id="btnResetDrillDown" onclick="resetDrillDown()" class="ml-2 text-[10px] text-slate-400 hover:text-slate-700 underline hidden">Reset</button>
+          </div>
+
+          <!-- Active Filter Chips Container -->
+          <div id="activeFilterChipsContainer" class="flex flex-wrap items-center gap-1.5">
+            <!-- Dynamically populated chips -->
+          </div>
         </div>
       </div>
 
-      <!-- 4 Top KPI Cards -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <!-- =========================================================================
+           TOP ROW: 6-CARD ENTERPRISE OBSERVABILITY KPI HEADER
+           ========================================================================= -->
+      <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3.5">
         
-        <!-- KPI 1: Total Downtime -->
-        <div class="card-modern p-5 relative overflow-hidden">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-bold uppercase text-slate-500 tracking-wider">Total Plant Downtime</span>
-            <div class="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center">
-              <i class="fa-regular fa-clock text-sm"></i>
+        <!-- CARD 1: OVERALL AVAILABILITY % -->
+        <div class="obs-card p-4 relative overflow-hidden flex flex-col justify-between cursor-pointer group" onclick="switchTab('kpi')" title="Click to inspect Plant Availability Breakdown">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold uppercase text-slate-500 tracking-wider">Availability</span>
+            <div class="relative w-8 h-8 flex items-center justify-center">
+              <svg class="w-8 h-8 -rotate-90 transform" viewBox="0 0 56 56">
+                <circle cx="28" cy="28" r="24" stroke="currentColor" stroke-width="4" fill="transparent" class="text-slate-200/60" />
+                <circle id="kpiAvailRingProgress" cx="28" cy="28" r="24" stroke="currentColor" stroke-width="4" stroke-dasharray="150.79" stroke-dashoffset="15" fill="transparent" stroke-linecap="round" class="text-emerald-500 transition-all duration-700" />
+              </svg>
+              <i class="fa-solid fa-circle-check text-[10px] text-emerald-600 absolute"></i>
             </div>
           </div>
-          <div class="text-2xl font-black text-slate-900 font-mono tracking-tight" id="kpi-total-hours">0.0 hrs</div>
-          <div class="text-xs text-slate-500 font-medium mt-1 flex items-center gap-1.5">
-            <span class="text-red-600 font-bold font-mono" id="kpi-total-mins">0 mins</span>
+          <div class="my-2">
+            <div class="text-2xl font-black text-slate-900 font-mono tracking-tight tabular-nums" id="kpiAvailNum">100.00%</div>
+            <div class="mt-1 flex items-center justify-between">
+              <span id="kpiAvailDelta" class="kpi-delta-tag kpi-delta-good"><i class="fa-solid fa-arrow-up text-[8px]"></i> +0.12% MoM</span>
+              <span class="text-[10px] font-bold text-slate-400 font-mono">Tgt: ≥99%</span>
+            </div>
+          </div>
+          <div class="mt-2 pt-2 border-t border-slate-100">
+            <canvas id="kpiSparkAvail" class="kpi-sparkline-canvas"></canvas>
+          </div>
+          <div class="absolute bottom-0 left-0 right-0 h-1 bg-emerald-500"></div>
+        </div>
+
+        <!-- CARD 2: TOTAL PLANT DOWNTIME -->
+        <div class="obs-card p-4 relative overflow-hidden flex flex-col justify-between cursor-pointer group" onclick="switchTab('kpi')" title="Click to view Downtime Breakdown">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold uppercase text-slate-500 tracking-wider">Total Downtime</span>
+            <div class="w-7 h-7 rounded-lg bg-red-50 text-red-600 flex items-center justify-center">
+              <i class="fa-regular fa-clock text-xs"></i>
+            </div>
+          </div>
+          <div class="my-2">
+            <div class="text-2xl font-black text-slate-900 font-mono tracking-tight tabular-nums" id="kpiDowntimeHoursNum">0.0 hrs</div>
+            <!-- Backwards compatible hidden anchors -->
+            <span id="kpi-total-hours" class="hidden">0.0 hrs</span>
+            <span id="kpi-total-mins" class="hidden">0 mins</span>
+            <div class="mt-1 flex items-center justify-between">
+              <span id="kpiDowntimeDelta" class="kpi-delta-tag kpi-delta-good"><i class="fa-solid fa-arrow-down text-[8px]"></i> 0.0% MoM</span>
+              <span id="kpiDowntimeMinsSub" class="text-[10px] font-semibold text-slate-400 font-mono tabular-nums">0 mins lost</span>
+            </div>
+          </div>
+          <div class="mt-2 pt-2 border-t border-slate-100">
+            <canvas id="kpiSparkDt" class="kpi-sparkline-canvas"></canvas>
           </div>
           <div class="absolute bottom-0 left-0 right-0 h-1 bg-red-600"></div>
         </div>
 
-        <!-- KPI 2: Active Open Incidents -->
-        <div class="card-modern p-5 relative overflow-hidden">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-bold uppercase text-slate-500 tracking-wider">Open Incidents</span>
-            <div class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
-              <i class="fa-solid fa-triangle-exclamation text-sm"></i>
+        <!-- CARD 3: ACTIVE OPEN OUTAGES -->
+        <div class="obs-card p-4 relative overflow-hidden flex flex-col justify-between cursor-pointer group" onclick="switchTab('logs')" title="Click to filter Open Incident Tickets">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold uppercase text-slate-500 tracking-wider">Open Incidents</span>
+            <div class="flex items-center gap-1.5">
+              <span id="kpiOpenAlertDot" class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+              <div class="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+                <i class="fa-solid fa-triangle-exclamation text-xs"></i>
+              </div>
             </div>
           </div>
-          <div class="text-2xl font-black text-amber-600 font-mono tracking-tight" id="kpi-open-alerts">0</div>
-          
+          <div class="my-2">
+            <div class="text-2xl font-black text-amber-600 font-mono tracking-tight tabular-nums" id="kpiOpenNum">0</div>
+            <span id="kpi-open-alerts" class="hidden">0</span>
+            <div class="mt-1 flex items-center justify-between">
+              <span id="kpiOpenDelta" class="kpi-delta-tag kpi-delta-good">0 vs prior</span>
+              <span class="text-[10px] font-bold text-slate-400 font-mono">Unresolved</span>
+            </div>
+          </div>
+          <div class="mt-2 pt-2 border-t border-slate-100">
+            <canvas id="kpiSparkOpen" class="kpi-sparkline-canvas"></canvas>
+          </div>
           <div class="absolute bottom-0 left-0 right-0 h-1 bg-amber-500"></div>
         </div>
 
-        <!-- KPI 3: MTTR -->
-        <div class="card-modern p-5 relative overflow-hidden">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-bold uppercase text-slate-500 tracking-wider">MTTR</span>
-            <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-              <i class="fa-solid fa-wrench text-sm"></i>
+        <!-- CARD 4: MTTR (MEAN TIME TO RESOLVE) -->
+        <div class="obs-card p-4 relative overflow-hidden flex flex-col justify-between cursor-pointer group" onclick="switchTab('kpi')" title="Mean Time To Resolve across closed failures">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold uppercase text-slate-500 tracking-wider">MTTR</span>
+            <div class="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+              <i class="fa-solid fa-wrench text-xs"></i>
             </div>
           </div>
-          <div class="text-2xl font-black text-slate-900 font-mono tracking-tight" id="kpi-mttr">N/A</div>
-          
+          <div class="my-2">
+            <div class="text-2xl font-black text-slate-900 font-mono tracking-tight tabular-nums" id="kpiMttrNum">N/A</div>
+            <span id="kpi-mttr" class="hidden">N/A</span>
+            <div class="mt-1 flex items-center justify-between">
+              <span id="kpiMttrDelta" class="kpi-delta-tag kpi-delta-good">Benchmark: &lt;60m</span>
+              <span class="text-[10px] font-bold text-slate-400 font-mono">Avg Fix</span>
+            </div>
+          </div>
+          <div class="mt-2 pt-2 border-t border-slate-100">
+            <canvas id="kpiSparkMttr" class="kpi-sparkline-canvas"></canvas>
+          </div>
           <div class="absolute bottom-0 left-0 right-0 h-1 bg-blue-600"></div>
         </div>
 
-        <!-- KPI 4: Resolution Rate -->
-        <div class="card-modern p-5 relative overflow-hidden">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-bold uppercase text-slate-500 tracking-wider">Closure Rate</span>
-            <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <i class="fa-solid fa-circle-check text-sm"></i>
+        <!-- CARD 5: CLOSURE RATE % -->
+        <div class="obs-card p-4 relative overflow-hidden flex flex-col justify-between cursor-pointer group" onclick="switchTab('logs')" title="Percentage of reported issues resolved">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold uppercase text-slate-500 tracking-wider">Closure Rate</span>
+            <div class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <i class="fa-solid fa-circle-check text-xs"></i>
             </div>
           </div>
-          <div class="text-2xl font-black text-emerald-600 font-mono tracking-tight" id="kpi-resolution-rate">N/A</div>
-          
+          <div class="my-2">
+            <div class="text-2xl font-black text-emerald-600 font-mono tracking-tight tabular-nums" id="kpiClosureNum">100%</div>
+            <span id="kpi-resolution-rate" class="hidden">100%</span>
+            <div class="w-full bg-slate-100 rounded-full h-1.5 mt-2 overflow-hidden">
+              <div id="kpiClosureProgressBar" class="bg-emerald-500 h-1.5 rounded-full transition-all duration-500" style="width: 100%"></div>
+            </div>
+            <div class="mt-1.5 flex items-center justify-between">
+              <span id="kpiClosureDelta" class="kpi-delta-tag kpi-delta-good">Tgt: ≥90%</span>
+              <span class="text-[10px] font-bold text-slate-400 font-mono">Resolved</span>
+            </div>
+          </div>
+          <div class="mt-2 pt-2 border-t border-slate-100">
+            <canvas id="kpiSparkClosure" class="kpi-sparkline-canvas"></canvas>
+          </div>
           <div class="absolute bottom-0 left-0 right-0 h-1 bg-emerald-500"></div>
+        </div>
+
+        <!-- CARD 6: CRITICAL BOTTLENECK EQUIPMENT -->
+        <div class="obs-card p-4 relative overflow-hidden flex flex-col justify-between cursor-pointer group" onclick="switchTab('logs')" title="Bottleneck production units down right now">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold uppercase text-slate-500 tracking-wider">Critical Assets</span>
+            <div class="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
+              <i class="fa-solid fa-microchip text-xs"></i>
+            </div>
+          </div>
+          <div class="my-2">
+            <div class="text-2xl font-black text-slate-900 font-mono tracking-tight tabular-nums" id="kpiCritNum">0</div>
+            <div class="mt-1 flex items-center justify-between">
+              <span id="kpiCritBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-full badge-status-optimal flex items-center gap-1">
+                <i class="fa-solid fa-circle-check text-[9px]"></i> Zero Outages
+              </span>
+            </div>
+          </div>
+          <div class="mt-2 pt-2 border-t border-slate-100">
+            <canvas id="kpiSparkCrit" class="kpi-sparkline-canvas"></canvas>
+          </div>
+          <div class="absolute bottom-0 left-0 right-0 h-1 bg-rose-600"></div>
         </div>
 
       </div>
@@ -900,6 +1093,387 @@
           <div id="catChartContainer" class="h-64 relative w-full">
             <canvas id="chartCategoryPie"></canvas>
           </div>
+        <!-- =========================================================================
+             SECTION 2B: ADVANCED OBSERVABILITY & BAR CHARTS SUITE (2D & 3D STUDIO)
+             ========================================================================= -->
+        <div id="sectionAdvancedBars" class="space-y-6 pt-4">
+          
+          <!-- Section 2B Header Banner & 2D / 3D Mode Switcher -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b-2 border-blue-600 gap-3">
+            <div class="flex items-center gap-2.5">
+              <span class="w-3 h-3 rounded-full bg-blue-600 animate-pulse"></span>
+              <div>
+                <h3 class="text-sm font-black uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                  <i class="fa-solid fa-chart-column text-blue-600"></i> Advanced Bar Charts &amp; Observability Studio
+                </h3>
+                <span class="text-[11px] text-slate-500 font-medium">Unified 2D &amp; 3D Visualizer Core • Crosshair Forensics • Continuous Availability Bands</span>
+              </div>
+            </div>
+
+            <!-- 2D vs 3D Studio Mode Toggle -->
+            <div class="inline-flex rounded-lg bg-slate-100 p-0.5 border border-slate-200 text-xs shrink-0" role="group">
+              <button type="button" id="btnMode2D" onclick="setVisualizerMode('2d')" class="px-3 py-1 rounded-md font-bold text-xs bg-white text-slate-900 shadow-xs flex items-center gap-1.5 transition-all">
+                <i class="fa-solid fa-chart-simple text-blue-600"></i>
+                <span>2D Suite</span>
+              </button>
+              <button type="button" id="btnMode3D" onclick="setVisualizerMode('3d')" class="px-3 py-1 rounded-md font-bold text-xs text-slate-600 hover:text-slate-900 flex items-center gap-1.5 transition-all">
+                <i class="fa-solid fa-cube text-[#E60012]"></i>
+                <span>3D Studio</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- =====================================================================
+               3D STUDIO CANVAS CONTAINER (WebGL Three.js / Isometric 3D)
+               ===================================================================== -->
+          <div id="suite3dStudio" class="hidden card-modern p-5 bg-slate-900 border border-slate-800 rounded-xl relative overflow-hidden shadow-2xl">
+            <div class="flex items-center justify-between mb-3 text-white">
+              <div class="flex items-center gap-2">
+                <i class="fa-solid fa-cubes text-[#E60012] text-sm"></i>
+                <h4 class="text-xs font-bold uppercase tracking-wider">Plant Machinery 3D Isometric Visualizer</h4>
+                <span class="text-[9px] font-mono px-2 py-0.5 rounded bg-blue-900/60 text-blue-300 border border-blue-700">WEBGL LIVE CORE</span>
+              </div>
+              <div class="flex items-center gap-2 text-xs">
+                <button type="button" onclick="reset3DCamera()" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-mono transition-colors">
+                  <i class="fa-solid fa-arrows-rotate mr-1"></i>Reset Camera
+                </button>
+                <button type="button" onclick="toggle3DRotation()" id="btn3DRotation" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-mono transition-colors">
+                  <i class="fa-solid fa-circle-play mr-1"></i>Auto Rotate
+                </button>
+              </div>
+            </div>
+
+            <!-- 3D Canvas Viewport -->
+            <div class="canvas-3d-container relative">
+              <canvas id="canvas3dDashboard" class="w-full h-full block"></canvas>
+              <div id="canvas3dOverlay" class="canvas-3d-overlay text-white text-xs font-mono bg-slate-950/80 px-3 py-1.5 rounded-lg border border-slate-800 backdrop-blur-xs">
+                <span class="text-slate-400">Drag to Orbit • Scroll to Zoom • Hover pillars for telemetry</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- =====================================================================
+               2D ADVANCED BAR CHARTS GRID
+               ===================================================================== -->
+          <div id="suite2dCharts" class="space-y-6">
+
+            <!-- Row 1: Stacked Category Inside Area & Grouped MoM vs Target -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              
+              <!-- Chart 1: Stacked Bar (Category inside Area) -->
+              <div class="card-modern p-5 bg-white shadow-sm border border-slate-200 rounded-xl relative">
+                <div class="flex items-center justify-between mb-3">
+                  <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                      <i class="fa-solid fa-layer-group text-blue-600"></i> Stacked Downtime by Category per Area
+                    </h4>
+                    <span class="text-[10px] text-slate-400">Click legend series to toggle category layers</span>
+                  </div>
+                  <span class="text-[10px] font-mono text-slate-400 font-bold">Hours</span>
+                </div>
+                <div class="h-68 relative">
+                  <canvas id="chartStackedCategoryCanvas"></canvas>
+                </div>
+              </div>
+
+              <!-- Chart 2: Grouped Comparison (This Mo vs Last Mo vs Target) -->
+              <div class="card-modern p-5 bg-white shadow-sm border border-slate-200 rounded-xl relative">
+                <div class="flex items-center justify-between mb-3">
+                  <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                      <i class="fa-solid fa-chart-bar text-emerald-600"></i> Grouped Variance: Current vs Prior vs Target
+                    </h4>
+                    <span class="text-[10px] text-slate-400">Benchmark target threshold (&lt;4.0 hrs per area)</span>
+                  </div>
+                  <span class="text-[10px] font-mono text-slate-400 font-bold">Hours</span>
+                </div>
+                <div class="h-68 relative">
+                  <canvas id="chartGroupedComparisonCanvas"></canvas>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Row 2: Ranked Horizontal Top 10 Machines & Pareto 80/20 Breakdown -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              
+              <!-- Chart 3: Horizontal Ranked Bars (Top 10 Machines by Downtime) -->
+              <div class="card-modern p-5 bg-white shadow-sm border border-slate-200 rounded-xl relative">
+                <div class="flex items-center justify-between mb-3">
+                  <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                      <i class="fa-solid fa-ranking-star text-[#E60012]"></i> Top 10 High-Impact Machinery Losses
+                    </h4>
+                    <span class="text-[10px] text-slate-400">Ranked by aggregate outage duration (Click bar to drill down)</span>
+                  </div>
+                  <button type="button" onclick="toggleAllOffendersModal()" class="text-[10px] font-bold text-red-600 hover:text-red-800 underline font-mono">
+                    View All
+                  </button>
+                </div>
+                <div class="h-68 relative">
+                  <canvas id="chartRankedMachinesCanvas"></canvas>
+                </div>
+              </div>
+
+              <!-- Chart 4: Pareto 80/20 Failure Breakdown -->
+              <div class="card-modern p-5 bg-white shadow-sm border border-slate-200 rounded-xl relative">
+                <div class="flex items-center justify-between mb-3">
+                  <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                      <i class="fa-solid fa-arrow-trend-up text-amber-600"></i> Pareto 80/20 Failure Root-Cause Analysis
+                    </h4>
+                    <span class="text-[10px] text-slate-400">Bars = Hours Lost • Line = Cumulative Loss % (80% vital few threshold)</span>
+                  </div>
+                  <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 font-bold">80/20 RULE</span>
+                </div>
+                <div class="h-68 relative">
+                  <canvas id="chartParetoCanvas"></canvas>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Row 3: Bullet Availability Bands & Waterfall Variance -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              
+              <!-- Chart 5: Bullet Availability Bars with Continuous Bands -->
+              <div class="card-modern p-5 bg-white shadow-sm border border-slate-200 rounded-xl relative">
+                <div class="flex items-center justify-between mb-3">
+                  <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                      <i class="fa-solid fa-bullseye text-emerald-600"></i> Bullet Availability vs Enterprise Target
+                    </h4>
+                    <span class="text-[10px] text-slate-400">Continuous Bands: Critical (&lt;95%) • Warning (95-&lt;99%) • Optimal (&ge;99%)</span>
+                  </div>
+                  <span class="text-[10px] font-mono text-emerald-600 font-bold">&ge;99.0% Target</span>
+                </div>
+                <div class="h-68 relative">
+                  <canvas id="chartBulletAvailabilityCanvas"></canvas>
+                </div>
+              </div>
+
+              <!-- Chart 6: Waterfall MoM Variance & Diverging Area Performance -->
+              <div class="card-modern p-5 bg-white shadow-sm border border-slate-200 rounded-xl relative">
+                <div class="flex items-center justify-between mb-3">
+                  <div class="flex items-center gap-2">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2" id="waterfallChartTitle">
+                      <i class="fa-solid fa-waterfall text-purple-600"></i> MoM Variance &amp; Diverging Shift
+                    </h4>
+                  </div>
+                  <div class="inline-flex rounded-lg bg-slate-100 p-0.5 border border-slate-200 text-xs">
+                    <button type="button" id="btnVarianceWaterfall" onclick="setVarianceChartType('waterfall')" class="px-2 py-0.5 rounded font-bold text-[10px] bg-white text-slate-900 shadow-xs">Waterfall</button>
+                    <button type="button" id="btnVarianceDiverging" onclick="setVarianceChartType('diverging')" class="px-2 py-0.5 rounded font-bold text-[10px] text-slate-600 hover:text-slate-900">Diverging</button>
+                  </div>
+                </div>
+                <div class="h-68 relative">
+                  <canvas id="chartVarianceCanvas"></canvas>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Row 4: Range Brush & Timeline Period Zoom Slider -->
+            <div class="card-modern p-4 bg-white shadow-sm border border-slate-200 rounded-xl">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                <div class="flex items-center gap-2">
+                  <i class="fa-solid fa-sliders text-blue-600 text-xs"></i>
+                  <span class="text-xs font-bold uppercase tracking-wider text-slate-700">Timeline Range Brush &amp; Micro-Period Zoom</span>
+                </div>
+                <span id="rangeBrushLabel" class="text-xs font-mono font-bold text-slate-600">Selected Window: Full 30-Day Cycle</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="text-[10px] font-mono text-slate-400 font-bold">Day 1</span>
+                <input type="range" id="rangeBrushSlider" min="1" max="31" value="31" oninput="onRangeBrushChange(this.value)" class="range-brush-slider cursor-pointer flex-1">
+                <span class="text-[10px] font-mono text-slate-400 font-bold">Day 31</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- =====================================================================
+               INTELLIGENCE & OPERATIONAL TELEMETRY MODULES
+               ===================================================================== -->
+          <div class="space-y-6 pt-2">
+
+            <!-- Section Banner for Intelligence & Observability Modules -->
+            <div class="flex items-center justify-between pb-2 border-b-2 border-emerald-600">
+              <div class="flex items-center gap-2.5">
+                <span class="w-3 h-3 rounded-full bg-emerald-600 animate-pulse"></span>
+                <h3 class="text-sm font-black uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                  <i class="fa-solid fa-microchip text-emerald-600"></i> Observability Forensics &amp; Reliability Intelligence
+                </h3>
+              </div>
+              <span class="text-xs font-semibold text-slate-500 hidden sm:inline">Telemetry &amp; SLA Compliance</span>
+            </div>
+
+            <!-- Module 1: 30-Day Availability Heatmap Matrix -->
+            <div class="card-modern p-5 bg-white shadow-sm border border-slate-200 rounded-xl">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                <div>
+                  <h4 class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-table-cells text-emerald-600"></i> 30-Day Operational Availability Heatmap
+                  </h4>
+                  <span class="text-[10px] text-slate-400">Click any cell to filter dashboard records directly by Date and Area</span>
+                </div>
+                <div class="flex items-center gap-3 text-[10px] font-semibold text-slate-600">
+                  <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-emerald-500"></span> &ge;99%</span>
+                  <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-amber-500"></span> 95-&lt;99%</span>
+                  <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-red-500"></span> &lt;95%</span>
+                </div>
+              </div>
+              <div class="overflow-x-auto pb-2">
+                <div id="heatmapMatrixContainer" class="min-w-[680px]">
+                  <!-- Populated by observability-dashboard.js -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Module 2: Gantt Incident Timeline & Predictive Forecast Row -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              
+              <!-- Gantt-Style Incident Timeline (7 cols) -->
+              <div class="lg:col-span-7 card-modern p-5 bg-white shadow-sm border border-slate-200 rounded-xl flex flex-col justify-between">
+                <div>
+                  <div class="flex items-center justify-between mb-2">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                      <i class="fa-solid fa-timeline text-blue-600"></i> Chronological Incident Timeline (Gantt)
+                    </h4>
+                    <span class="text-[10px] font-mono text-slate-400 font-bold">Recent Incidents</span>
+                  </div>
+                  <p class="text-[10px] text-slate-400 mb-3">Real-time incident spans across machinery. Pulsing bar indicates actively unclosed outage.</p>
+                </div>
+                <div id="ganttTimelineContainer" class="space-y-2.5 min-h-[220px]">
+                  <!-- Populated dynamically -->
+                </div>
+              </div>
+
+              <!-- Moving Average Forecast & 2-Sigma Anomaly Detection (5 cols) -->
+              <div class="lg:col-span-5 space-y-4">
+                
+                <!-- 3-Period Rolling Average Forecast Card -->
+                <div class="card-modern p-4.5 bg-white shadow-sm border border-slate-200 rounded-xl">
+                  <div class="flex items-center justify-between mb-2">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                      <i class="fa-solid fa-crystal-ball text-purple-600"></i> Rolling Average Forecast
+                    </h4>
+                    <span class="text-[9px] font-black uppercase px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 font-mono">PROJECTED ESTIMATE</span>
+                  </div>
+                  <div class="my-2 flex items-baseline gap-2">
+                    <span class="text-2xl font-black font-mono text-purple-700" id="forecastAvailVal">99.15%</span>
+                    <span class="text-xs text-slate-400 font-medium">projected next period availability</span>
+                  </div>
+                  <div class="text-[11px] text-slate-500 leading-relaxed" id="forecastDetailText">
+                    Based on a 3-period weighted exponential moving average. Projected downtime risk is low with expected aggregate loss of ~12.5 hrs.
+                  </div>
+                </div>
+
+                <!-- 2-Sigma Outlier Anomaly Card -->
+                <div class="card-modern p-4.5 bg-white shadow-sm border border-slate-200 rounded-xl" id="anomalyAlertCard">
+                  <div class="flex items-center justify-between mb-2">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                      <i class="fa-solid fa-bolt-lightning text-amber-500"></i> Statistical Anomaly Detection (2-&sigma;)
+                    </h4>
+                    <span class="text-[9px] font-black uppercase px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 font-mono">2-SIGMA FILTER</span>
+                  </div>
+                  <div id="anomalyAlertBody" class="text-[11px] text-slate-600 leading-relaxed">
+                    <!-- Populated dynamically -->
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+
+            <!-- Module 3: MTBF & Reliability Scores + SLA Compliance Tracker -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              
+              <!-- MTBF & Area Reliability Scores -->
+              <div class="card-modern p-5 bg-white shadow-sm border border-slate-200 rounded-xl">
+                <div class="flex items-center justify-between mb-3">
+                  <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                      <i class="fa-solid fa-shield-halved text-emerald-600"></i> MTBF &amp; Area Reliability Index
+                    </h4>
+                    <span class="text-[10px] text-slate-400">Mean Time Between Failures &amp; Operational Health Score (0-100)</span>
+                  </div>
+                  <span class="text-[10px] font-mono text-slate-400 font-bold">Health Score</span>
+                </div>
+                <div id="mtbfScoresContainer" class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  <!-- Populated dynamically -->
+                </div>
+              </div>
+
+              <!-- SLA Tracker: ATC vs MELSS -->
+              <div class="card-modern p-5 bg-white shadow-sm border border-slate-200 rounded-xl">
+                <div class="flex items-center justify-between mb-3">
+                  <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                      <i class="fa-solid fa-handshake-angle text-blue-600"></i> SLA Resolution Compliance (ATC vs MELSS)
+                    </h4>
+                    <span class="text-[10px] text-slate-400">Target: &lt;60 min resolution on production-impacting outages</span>
+                  </div>
+                  <span class="text-[10px] font-mono text-blue-600 font-bold">&lt;60m Target</span>
+                </div>
+                <div id="slaTrackerContainer" class="space-y-4">
+                  <!-- Populated dynamically -->
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Module 4: Deterministic Smart Insights Panel & Top Offenders Table -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              
+              <!-- Smart Insights Panel (5 cols) -->
+              <div class="lg:col-span-5 card-modern p-5 bg-white shadow-sm border border-slate-200 rounded-xl flex flex-col justify-between">
+                <div>
+                  <div class="flex items-center justify-between mb-2">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                      <i class="fa-solid fa-lightbulb text-amber-500"></i> Deterministic Smart Insights
+                    </h4>
+                    <span class="text-[9px] font-bold uppercase px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 font-mono">RULE-BASED AI</span>
+                  </div>
+                  <p class="text-[10px] text-slate-400 mb-3">Auto-generated operational findings derived from active incident records.</p>
+                </div>
+                <div id="smartInsightsContainer" class="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
+                  <!-- Populated dynamically -->
+                </div>
+              </div>
+
+              <!-- Top Offenders & Chronic Issues Table (7 cols) -->
+              <div class="lg:col-span-7 card-modern p-5 bg-white shadow-sm border border-slate-200 rounded-xl flex flex-col justify-between">
+                <div>
+                  <div class="flex items-center justify-between mb-2">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                      <i class="fa-solid fa-triangle-exclamation text-rose-600"></i> Top Offenders &amp; Chronic Outages
+                    </h4>
+                    <span class="text-[10px] font-mono text-rose-600 font-bold">&gt;3 Incidents = Chronic Flag</span>
+                  </div>
+                  <p class="text-[10px] text-slate-400 mb-3">Equipment driving highest operational loss in current period.</p>
+                </div>
+                <div class="overflow-x-auto">
+                  <table class="w-full text-left border-collapse">
+                    <thead>
+                      <tr class="border-b border-slate-200 bg-slate-50 text-[10px] uppercase font-bold text-slate-600">
+                        <th class="px-3 py-2">Machine</th>
+                        <th class="px-3 py-2">Area</th>
+                        <th class="px-3 py-2 text-right">Lost Time</th>
+                        <th class="px-3 py-2 text-right">Share %</th>
+                        <th class="px-3 py-2 text-center">Incidents</th>
+                        <th class="px-3 py-2 text-center">Health Status</th>
+                      </tr>
+                    </thead>
+                    <tbody id="topOffendersTableBody">
+                      <!-- Populated dynamically -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
         </div>
 
       </div>
@@ -1934,6 +2508,8 @@
 
   <!-- Application Logic -->
   <script src="app.js?v=5.4"></script>
+  <!-- Enterprise Observability & Advanced Visualizations Engine -->
+  <script src="observability-dashboard.js?v=1.0"></script>
 
   <!-- =========================================================================
        MODAL: EXPORT REPORT BY DATE OR MONTH (EXECUTIVE EXCEL & CSV)
@@ -2182,6 +2758,32 @@
         </button>
       </div>
 
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       GLOBAL COMMAND PALETTE MODAL (CTRL+K / CMD+K)
+       ========================================================================= -->
+  <div id="cmdPaletteBackdrop" class="cmd-palette-backdrop hidden" onclick="closeCommandPalette()">
+    <div class="cmd-palette-modal mx-4 w-full max-w-xl animate-scale-up" onclick="event.stopPropagation()">
+      <!-- Search Input Header -->
+      <div class="p-4 border-b border-slate-100 flex items-center gap-3 bg-white">
+        <i class="fa-solid fa-magnifying-glass text-slate-400 text-sm"></i>
+        <input type="text" id="cmdPaletteInput" placeholder="Type a command or jump to area, machine, filter, view preset..." class="w-full text-sm font-semibold text-slate-900 bg-transparent border-none focus:outline-none placeholder-slate-400">
+        <span class="text-[10px] font-mono font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">ESC</span>
+      </div>
+      <!-- Quick Categories / Navigation Results -->
+      <div id="cmdPaletteResults" class="max-h-80 overflow-y-auto p-2 space-y-0.5 bg-white">
+        <!-- Dynamically populated by observability-dashboard.js -->
+      </div>
+      <!-- Footer Hints -->
+      <div class="px-4 py-2 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-mono">
+        <span class="flex items-center gap-2">
+          <span><kbd class="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[10px]">↑</kbd> <kbd class="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[10px]">↓</kbd> Navigate</span>
+          <span><kbd class="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[10px]">↵</kbd> Select</span>
+        </span>
+        <span class="text-slate-400 font-semibold">Plant IT Command Hub</span>
+      </div>
     </div>
   </div>
 
