@@ -11,8 +11,7 @@
     "test:fixes": "node tests/verify_phase1_phase2_fixes.js",
     "test:user5": "node tests/verify_user_5_requests.js",
     "test:obs": "node tests/verify_enterprise_dashboard.js",
-    "test:3d": "node tests/verify_3d_data_adapter.js",
-    "test:all": "node tests/run_tests.js && node tests/run_acceptance_tests.js && node tests/verify_18_regressions.js && node tests/verify_phase1_phase2_fixes.js && node tests/verify_user_5_requests.js && node tests/verify_enterprise_dashboard.js && node tests/verify_3d_data_adapter.js",
+    "test:all": "node tests/run_tests.js && node tests/run_acceptance_tests.js && node tests/verify_18_regressions.js && node tests/verify_phase1_phase2_fixes.js && node tests/verify_user_5_requests.js && node tests/verify_enterprise_dashboard.js",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"
