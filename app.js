@@ -3839,29 +3839,32 @@ function initAuthSystem() {
         let matchedUser = null;
         let cloudConnected = false;
 
-        // 1. Authenticate against Serverless /api/auth API (Authoritative Server-Enforced RBAC)
+        // 1. Authenticate against Serverless /api/auth API (Authoritative Server-Enforced RBAC in Cloud)
         let serverAuthenticated = false;
-        try {
-          const authReq = await fetch("/api/auth", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username: usernameInput, password: passwordInput })
-          });
-          if (authReq.ok) {
-            const authData = await authReq.json();
-            if (authData && authData.token && authData.user) {
-              serverAuthenticated = true;
-              matchedUser = authData.user;
-              sessionStorage.setItem("YOKOHAMA_SESSION_TOKEN", authData.token);
-              localStorage.setItem("YOKOHAMA_SESSION_TOKEN", authData.token);
+        const isOnline = typeof window.isLocalEnvironment === "function" ? !window.isLocalEnvironment() : true;
+        if (isOnline) {
+          try {
+            const authReq = await fetch("/api/auth", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ username: usernameInput, password: passwordInput })
+            });
+            if (authReq.ok) {
+              const authData = await authReq.json();
+              if (authData && authData.token && authData.user) {
+                serverAuthenticated = true;
+                matchedUser = authData.user;
+                sessionStorage.setItem("YOKOHAMA_SESSION_TOKEN", authData.token);
+                localStorage.setItem("YOKOHAMA_SESSION_TOKEN", authData.token);
+              }
+            } else if (authReq.status === 429) {
+              const errJson = await authReq.json().catch(() => ({}));
+              showToast(errJson.error || "Too many login attempts. Please wait before retrying.", "error");
+              return;
             }
-          } else if (authReq.status === 429) {
-            const errJson = await authReq.json().catch(() => ({}));
-            showToast(errJson.error || "Too many login attempts. Please wait before retrying.", "error");
-            return;
+          } catch (apiErr) {
+            console.warn("Direct /api/auth serverless call skipped/offline, testing resilient fallbacks:", apiErr);
           }
-        } catch (apiErr) {
-          console.warn("Direct /api/auth serverless call skipped/offline, testing resilient fallbacks:", apiErr);
         }
 
         // 2. Cloud Supabase Database Check (if API serverless route is bypassed in desktop/webview)
@@ -3899,8 +3902,8 @@ function initAuthSystem() {
           }
         }
 
-        // 3. Offline Standalone Fallback ONLY: Compares cryptographic SHA-256 hashes only (zero plain passwords)
-        if (!matchedUser && !cloudConnected) {
+        // 3. Offline Standalone Fallback: Compares cryptographic SHA-256 hashes only (zero plain passwords)
+        if (!matchedUser) {
           const pHash = await hashCredential(passwordInput);
           for (const key of Object.keys(USER_ACCOUNTS)) {
             const acc = USER_ACCOUNTS[key];
@@ -3957,6 +3960,21 @@ function updateAuthUI(currentUser) {
   const headerAuthAction = document.getElementById("headerAuthAction");
   const headerExportButtons = document.getElementById("headerExportButtons");
   const tableExportButtons = document.getElementById("tableExportButtons");
+
+  // Update environment indicator badge (Local Dev vs Vercel Cloud)
+  const envBadge = document.getElementById("envStatusBadge");
+  if (envBadge && typeof window.getRuntimeEnvironment === "function") {
+    const env = window.getRuntimeEnvironment();
+    if (env.isLocal) {
+      envBadge.className = "hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-amber-950/40 text-amber-300 border border-amber-500/30 shadow-sm";
+      envBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span><span>' + (env.label || 'Local Dev (Port 8080)') + '</span>';
+      envBadge.title = "Running locally in standalone mode (no external serverless required)";
+    } else {
+      envBadge.className = "hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-emerald-950/40 text-emerald-300 border border-emerald-500/30 shadow-sm";
+      envBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span><span>Vercel Cloud (Live)</span>';
+      envBadge.title = "Connected to Vercel Serverless & Supabase Cloud";
+    }
+  }
 
   const tabBtnEntry = document.getElementById("tabBtnEntry");
   const tabBtnKpi = document.getElementById("tabBtnKpi");

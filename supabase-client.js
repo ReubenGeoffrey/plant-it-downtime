@@ -7,6 +7,29 @@ const SUPABASE_URL = 'https://mrzlgrkkqdijoruchpgb.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1yemxncmtrcWRpam9ydWNocGdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA5NzUwOTksImV4cCI6MjEwNjU1MTA5OX0.3gPv_cHRDCOgfC27XLIGaiTtH9p7QctqBedZz2zXdwM';
 const REST_BASE = `${SUPABASE_URL}/rest/v1`;
 
+// ----------------------------------------------------------------------------
+// Runtime Environment Detection (Local Dev vs Vercel Cloud Production)
+// ----------------------------------------------------------------------------
+function getRuntimeEnvironment() {
+  if (typeof window === 'undefined') return { isLocal: false, isOnline: true, name: 'server' };
+  const host = window.location.hostname || '';
+  const proto = window.location.protocol || '';
+  const isLocal = host === 'localhost' ||
+                  host === '127.0.0.1' ||
+                  host === '0.0.0.0' ||
+                  proto === 'file:' ||
+                  typeof window.__TAURI__ !== 'undefined';
+  return {
+    isLocal: isLocal,
+    isOnline: !isLocal,
+    name: isLocal ? 'local' : 'vercel-cloud',
+    label: isLocal ? `Local Dev (${window.location.port || '8080'})` : 'Vercel Cloud (Live)',
+    host: host
+  };
+}
+window.getRuntimeEnvironment = getRuntimeEnvironment;
+window.isLocalEnvironment = function() { return getRuntimeEnvironment().isLocal; };
+
 function getSessionToken() {
   if (typeof window === 'undefined') return '';
   return window.sessionStorage?.getItem('YOKOHAMA_SESSION_TOKEN') ||
@@ -120,29 +143,32 @@ function mapRecordToRow(record) {
 async function authenticateUserWithSupabase(username, password) {
   const cleanUsername = (username || '').trim().toLowerCase();
   const rawPassword = String(password || '').trim();
+  const env = getRuntimeEnvironment();
 
-  // Try server-side authenticated endpoint first (Vercel / Node production)
-  try {
-    const res = await fetch('/api/auth', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: cleanUsername, password: rawPassword })
-    });
+  // Try server-side authenticated endpoint first (Vercel / Node production only)
+  if (env.isOnline) {
+    try {
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: cleanUsername, password: rawPassword })
+      });
 
-    if (res.status === 429) {
-      const errData = await res.json().catch(() => ({}));
-      return { user: null, rateLimited: true, retryAfter: errData.retryAfter || 60 };
-    }
-
-    if (res.ok) {
-      const data = await res.json();
-      if (data && data.token && data.user) {
-        setSessionToken(data.token);
-        return { user: data.user, token: data.token, connected: true };
+      if (res.status === 429) {
+        const errData = await res.json().catch(() => ({}));
+        return { user: null, rateLimited: true, retryAfter: errData.retryAfter || 60 };
       }
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.token && data.user) {
+          setSessionToken(data.token);
+          return { user: data.user, token: data.token, connected: true };
+        }
+      }
+    } catch (err) {
+      // Non-serverless environment fallback (e.g. desktop standalone file:// mode)
     }
-  } catch (err) {
-    // Non-serverless environment fallback (e.g. desktop standalone file:// mode)
   }
 
   // Fallback for standalone desktop / direct database
@@ -177,7 +203,7 @@ async function authenticateUserWithSupabase(username, password) {
       }
     }
   } catch (err) {
-    console.error('[Auth] Direct network error:', err);
+    console.warn('[Auth] Direct network error (local/offline):', err);
   }
 
   return { user: null, connected: false };
@@ -189,9 +215,10 @@ window.authenticateUserWithSupabase = authenticateUserWithSupabase;
 // ----------------------------------------------------------------------------
 async function fetchCloudIncidents() {
   const token = getSessionToken();
+  const env = getRuntimeEnvironment();
 
-  // Primary: Server-side authenticated API
-  if (token) {
+  // Primary: Server-side authenticated API (Vercel cloud production)
+  if (token && env.isOnline) {
     try {
       const res = await fetch('/api/incidents', {
         method: 'GET',
@@ -234,7 +261,8 @@ window.fetchCloudIncidents = fetchCloudIncidents;
 // ----------------------------------------------------------------------------
 async function upsertCloudIncident(record) {
   const token = getSessionToken();
-  if (token) {
+  const env = getRuntimeEnvironment();
+  if (token && env.isOnline) {
     try {
       const res = await fetch('/api/incidents', {
         method: 'POST',
@@ -275,8 +303,9 @@ window.upsertCloudIncident = upsertCloudIncident;
 async function bulkUpsertCloudIncidents(records, mode = 'append') {
   if (!Array.isArray(records) || records.length === 0) return false;
   const token = getSessionToken();
+  const env = getRuntimeEnvironment();
 
-  if (token) {
+  if (token && env.isOnline) {
     try {
       const res = await fetch('/api/incidents', {
         method: 'POST',
@@ -317,8 +346,9 @@ window.bulkUpsertCloudIncidents = bulkUpsertCloudIncidents;
 async function deleteCloudIncident(id) {
   if (!id) return false;
   const token = getSessionToken();
+  const env = getRuntimeEnvironment();
 
-  if (token) {
+  if (token && env.isOnline) {
     try {
       const res = await fetch(`/api/incidents?id=${encodeURIComponent(id)}`, {
         method: 'DELETE',
@@ -348,7 +378,8 @@ window.deleteCloudIncident = deleteCloudIncident;
 // ----------------------------------------------------------------------------
 async function clearAllCloudIncidents(confirmPhrase = '') {
   const token = getSessionToken();
-  if (token) {
+  const env = getRuntimeEnvironment();
+  if (token && env.isOnline) {
     try {
       const res = await fetch('/api/incidents', {
         method: 'DELETE',
@@ -385,7 +416,8 @@ window.clearAllCloudIncidents = clearAllCloudIncidents;
 // ----------------------------------------------------------------------------
 async function updateCloudUserAccount(role, username, displayName, password) {
   const token = getSessionToken();
-  if (token) {
+  const env = getRuntimeEnvironment();
+  if (token && env.isOnline) {
     try {
       const res = await fetch('/api/auth', {
         method: 'PUT',
