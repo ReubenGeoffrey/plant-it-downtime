@@ -627,6 +627,11 @@ window.unmountAuthenticatedApp = function() {
   if (gatekeeper) {
     gatekeeper.classList.remove("hidden");
   }
+  const btnCloudSync = document.getElementById("btnCloudSync");
+  if (btnCloudSync) {
+    btnCloudSync.classList.add("hidden");
+    btnCloudSync.classList.remove("flex");
+  }
 
   updateAuthUI(null);
 };
@@ -893,6 +898,13 @@ function updateViewsVisibility(tabName, user) {
   // User Authenticated: Unhide Container & Hide Gatekeeper Screen
   if (gatekeeper) gatekeeper.classList.add("hidden");
   if (appContainer) appContainer.classList.remove("hidden");
+
+    // Live Cloud Sync Button (Visible only when authenticated)
+    const btnCloudSync = document.getElementById("btnCloudSync");
+    if (btnCloudSync) {
+      btnCloudSync.classList.remove("hidden");
+      btnCloudSync.classList.add("flex");
+    }
   if (lockedBanner) lockedBanner.classList.add("hidden");
   if (protectedSectionsWrapper) protectedSectionsWrapper.classList.remove("hidden");
 
@@ -1073,18 +1085,21 @@ function updateAuthUI(currentUser) {
   const headerExportButtons = document.getElementById("headerExportButtons");
   const tableExportButtons = document.getElementById("tableExportButtons");
 
-  // Update environment indicator badge (Local Dev vs Vercel Cloud)
+  // Environment badge removed from UI as requested
   const envBadge = document.getElementById("envStatusBadge");
-  if (envBadge && typeof window.getRuntimeEnvironment === "function") {
-    const env = window.getRuntimeEnvironment();
-    if (env.isLocal) {
-      envBadge.className = "hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-amber-950/40 text-amber-300 border border-amber-500/30 shadow-sm";
-      envBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span><span>' + (env.label || 'Local Dev (Port 8080)') + '</span>';
-      envBadge.title = "Running locally in standalone mode (no external serverless required)";
+  if (envBadge) {
+    envBadge.remove();
+  }
+
+  // Cloud Sync visibility: Strictly hidden on login page, shown when authenticated
+  const btnCloudSync = document.getElementById("btnCloudSync");
+  if (btnCloudSync) {
+    if (currentUser) {
+      btnCloudSync.classList.remove("hidden");
+      btnCloudSync.classList.add("flex");
     } else {
-      envBadge.className = "hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-emerald-950/40 text-emerald-300 border border-emerald-500/30 shadow-sm";
-      envBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span><span>Vercel Cloud (Live)</span>';
-      envBadge.title = "Connected to Vercel Serverless & Supabase Cloud";
+      btnCloudSync.classList.add("hidden");
+      btnCloudSync.classList.remove("flex");
     }
   }
 
@@ -1178,6 +1193,11 @@ function updateAuthUI(currentUser) {
     if (appContainer) appContainer.classList.add("hidden");
     if (headerExportButtons) headerExportButtons.classList.add("hidden");
     if (tableExportButtons) tableExportButtons.classList.add("hidden");
+    const btnCloudSync = document.getElementById("btnCloudSync");
+    if (btnCloudSync) {
+      btnCloudSync.classList.add("hidden");
+      btnCloudSync.classList.remove("flex");
+    }
     const btnEmptyLogs = document.getElementById("btnEmptyIncidentLogs");
     if (btnEmptyLogs) btnEmptyLogs.classList.add("hidden");
 
