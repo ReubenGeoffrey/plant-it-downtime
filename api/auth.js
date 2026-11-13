@@ -317,11 +317,3 @@ module.exports = async function handler(req, res) {
 
   return res.status(405).json({ error: `Method ${req.method} not allowed` });
 };
-
-  // 4. DELETE /api/auth (Session Logout acknowledgement)
-  if (req.method === 'DELETE') {
-    return res.status(200).json({ message: 'Session logged out successfully' });
-  }
-
-  return res.status(405).json({ error: `Method ${req.method} not allowed` });
-};
