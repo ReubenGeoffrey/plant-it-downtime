@@ -71,6 +71,10 @@ module.exports = async function handler(req, res) {
         const invalidRecords = [];
 
         body.records.forEach((r, idx) => {
+          r.createdBy = r.createdBy || user.username;
+          r.createdByName = r.createdByName || user.displayName || user.username;
+          r.updatedBy = user.username;
+          r.actorName = user.displayName || user.username;
           const val = validateIncident(r);
           if (val.isValid) {
             validRecords.push(val.cleaned);
@@ -174,7 +178,12 @@ module.exports = async function handler(req, res) {
         });
       }
 
-      // B. Single Record Submission
+      // Single Record Submission
+      body.createdBy = body.createdBy || user.username;
+      body.createdByName = body.createdByName || user.displayName || user.username;
+      body.updatedBy = user.username;
+      body.actorName = user.displayName || user.username;
+
       const validation = validateIncident(body);
       if (!validation.isValid) {
         return res.status(400).json({
@@ -302,12 +311,13 @@ module.exports = async function handler(req, res) {
 
       // Handle Clear All / Empty Logs with Strict Confirmation Phrase
       if (action === 'clear_all') {
-        const requiredPhrase = 'PERMANENTLY DELETE ALL LOGS';
+        const requiredPhrase1 = 'CONFIRM RESET';
+        const requiredPhrase2 = 'PERMANENTLY DELETE ALL LOGS';
         const userPhrase = String(body.confirmPhrase || query.confirmPhrase || '').trim();
 
-        if (userPhrase !== requiredPhrase) {
+        if (userPhrase !== requiredPhrase1 && userPhrase !== requiredPhrase2) {
           return res.status(400).json({
-            error: `Confirmation phrase required to empty all logs. You must provide confirmPhrase: "${requiredPhrase}"`
+            error: `Confirmation phrase required to empty all logs. You must provide confirmPhrase: "${requiredPhrase1}"`
           });
         }
 
@@ -326,6 +336,7 @@ module.exports = async function handler(req, res) {
           auditEvent: {
             action: 'EMPTY_ALL_LOGS',
             performedBy: adminUser.username,
+            actorName: adminUser.displayName || adminUser.username,
             timestamp: new Date().toISOString()
           }
         });

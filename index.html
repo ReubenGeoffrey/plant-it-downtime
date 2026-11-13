@@ -116,56 +116,57 @@
   </header>
 
   <!-- =========================================================================
-       ADMIN LOGIN GATEKEEPER (Displayed FIRST For Unauthenticated Users)
+       APPLICATION MOUNT ROOT & LOGIN GATEKEEPER (SEC-01)
        ========================================================================= -->
-  <section id="adminGatekeeperSection" class="min-h-[calc(100vh-8rem)] flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8 relative border-t-4 border-[#E60012] animate-scale-up">
-      <div class="text-center mb-6">
-        <div class="w-16 h-16 rounded-2xl bg-red-50 border border-red-100 flex items-center justify-center text-[#E60012] mx-auto mb-3 shadow-xs">
-          <i class="fa-solid fa-industry text-2xl"></i>
-        </div>
-        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight uppercase">Plant Portal Sign In</h2>
-        <p class="text-xs text-slate-400 font-medium mt-1">Enter your authorized username &amp; password</p>
-      </div>
-
-      <form id="adminLoginForm" class="space-y-4">
-        <div>
-          <label class="form-label-modern" for="adminUsername">Username</label>
-          <div class="relative">
-            <input type="text" id="adminUsername" required value="" class="form-input-modern pl-9 font-medium" placeholder="Username" autocomplete="username">
-            <i class="fa-solid fa-user absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+  <main id="appMountRoot" class="flex-1 flex flex-col">
+    <!-- ADMIN LOGIN GATEKEEPER (Displayed FIRST For Unauthenticated Users) -->
+    <section id="adminGatekeeperSection" class="min-h-[calc(100vh-8rem)] flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8 relative border-t-4 border-[#E60012] animate-scale-up">
+        <div class="text-center mb-6">
+          <div class="w-16 h-16 rounded-2xl bg-red-50 border border-red-100 flex items-center justify-center text-[#E60012] mx-auto mb-3 shadow-xs">
+            <i class="fa-solid fa-industry text-2xl"></i>
           </div>
+          <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight uppercase">Plant Portal Sign In</h2>
+          <p class="text-xs text-slate-400 font-medium mt-1">Enter your authorized username &amp; password</p>
         </div>
 
-        <div>
-          <label class="form-label-modern" for="adminPassword">Password</label>
-          <div class="relative">
-            <input type="password" id="adminPassword" required value="" class="form-input-modern pl-9 pr-10 font-medium" placeholder="Enter password" autocomplete="current-password">
-            <i class="fa-solid fa-key absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-            <button type="button" onclick="togglePasswordVisibility()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs" title="Toggle password visibility">
-              <i id="togglePassIcon" class="fa-solid fa-eye"></i>
+        <form id="adminLoginForm" class="space-y-4">
+          <div>
+            <label class="form-label-modern" for="adminUsername">Username</label>
+            <div class="relative">
+              <input type="text" id="adminUsername" required value="" class="form-input-modern pl-9 font-medium" placeholder="Username" autocomplete="username">
+              <i class="fa-solid fa-user absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            </div>
+          </div>
+
+          <div>
+            <label class="form-label-modern" for="adminPassword">Password</label>
+            <div class="relative">
+              <input type="password" id="adminPassword" required value="" class="form-input-modern pl-9 pr-10 font-medium" placeholder="Enter password" autocomplete="current-password">
+              <i class="fa-solid fa-key absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+              <button type="button" onclick="togglePasswordVisibility()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs" title="Toggle password visibility">
+                <i id="togglePassIcon" class="fa-solid fa-eye"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="pt-2">
+            <button type="submit" class="btn-yoko-red w-full py-3 text-sm font-bold shadow-lg flex items-center justify-center gap-2">
+              <i class="fa-solid fa-right-to-bracket"></i>
+              <span>Sign In to Portal</span>
             </button>
           </div>
-        </div>
 
-        <div class="pt-2">
-          <button type="submit" class="btn-yoko-red w-full py-3 text-sm font-bold shadow-lg flex items-center justify-center gap-2">
-            <i class="fa-solid fa-right-to-bracket"></i>
-            <span>Sign In to Portal</span>
-          </button>
-        </div>
-
-
-
-
-      </form>
-    </div>
-  </section>
+        </form>
+      </div>
+    </section>
+  </main>
 
   <!-- =========================================================================
-       DOWNTIME APPLICATION (Unlocked & Shown After Admin Login)
+       DOWNTIME APPLICATION TEMPLATE (Unlocked & Mounted Post-Authentication)
        ========================================================================= -->
-  <div id="downtimeAppContainer" class="hidden flex-1 flex flex-col">
+  <template id="authenticatedAppTemplate">
+  <div id="downtimeAppContainer" class="flex-1 flex flex-col">
     <!-- Sub-navigation Tabs Bar -->
     <div class="bg-white border-b border-slate-200 shadow-sm sticky top-16 z-30">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -205,7 +206,7 @@
             <div class="flex items-center gap-2 mb-1">
               <span class="inline-block w-2.5 h-6 bg-[#E60012] rounded-sm"></span>
               <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight uppercase">
-                IT DOWN TIME ENTRY
+                IT Downtime Entry
               </h2>
             </div>
 
@@ -226,14 +227,19 @@
         <!-- ROW 1: Issue Date, Nature of Issue, Area of Issue, Machine Code -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           
-          <!-- 1. Issue Date -->
+          <!-- 1. Issue Date & Start Time (MATH-04: Timestamp & Shift Tracking) -->
           <div>
             <label class="form-label-modern" for="issueDate">
-              Issue Date <span class="required-star">*</span>
+              Issue Date &amp; Start Time <span class="required-star">*</span>
             </label>
-            <div class="relative">
-              <input type="date" id="issueDate" name="issueDate" required class="form-input-modern pr-8 font-medium">
-              <i class="fa-regular fa-calendar absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-xs"></i>
+            <div class="grid grid-cols-5 gap-1.5">
+              <div class="col-span-3 relative">
+                <input type="date" id="issueDate" name="issueDate" required onchange="handleDateTimeChange()" class="form-input-modern pr-8 font-medium text-xs">
+                <i class="fa-regular fa-calendar absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-xs"></i>
+              </div>
+              <div class="col-span-2 relative">
+                <input type="time" id="issueTime" name="issueTime" onchange="handleDateTimeChange()" class="form-input-modern px-2 font-medium text-xs font-mono" title="Incident Start Time">
+              </div>
             </div>
           </div>
 
@@ -299,13 +305,13 @@
               <label class="form-label-modern mb-0" for="btnToggleFormMachineDropdown">
                 Machine Code <span class="required-star">*</span>
               </label>
-              <!-- Critical (Yes/No) Option Switcher -->
-              <div class="flex items-center gap-1.5 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200" title="Is this a critical production bottleneck machine?">
-                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Critical:</span>
-                <button type="button" id="btn-crit-no" onclick="setCriticalMachine('No')" class="px-2 py-0.5 text-[10px] font-bold rounded-md bg-white text-slate-800 shadow-sm transition-all cursor-pointer">
+              <!-- Critical / Machine Specific Option Switcher (UI-04: Clear accessible label) -->
+              <div class="flex items-center gap-1.5 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200" title="Is this a machine-specific / critical bottleneck issue?">
+                <span class="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Critical:</span>
+                <button type="button" id="btn-crit-no" onclick="setCriticalMachine('No')" class="px-2 py-0.5 text-[10px] font-bold rounded-md bg-white text-slate-800 shadow-sm transition-all cursor-pointer" aria-pressed="true">
                   No
                 </button>
-                <button type="button" id="btn-crit-yes" onclick="setCriticalMachine('Yes')" class="px-2 py-0.5 text-[10px] font-bold rounded-md text-slate-500 hover:text-red-600 transition-all cursor-pointer">
+                <button type="button" id="btn-crit-yes" onclick="setCriticalMachine('Yes')" class="px-2 py-0.5 text-[10px] font-bold rounded-md text-slate-500 hover:text-red-600 transition-all cursor-pointer" aria-pressed="false">
                   Yes
                 </button>
               </div>
@@ -436,14 +442,19 @@
             </select>
           </div>
 
-          <!-- 11. Issue Closed Date -->
+          <!-- 11. Issue Closed Date & End Time (MATH-04: Timestamp & Shift Tracking) -->
           <div id="closed-date-container" style="opacity: 0.6;">
             <label class="form-label-modern" for="closedDate">
-              Issue Closed Date
+              Closed Date &amp; End Time
             </label>
-            <div class="relative">
-              <input type="date" id="closedDate" name="closedDate" disabled class="form-input-modern pr-8 font-medium">
-              <i class="fa-regular fa-calendar-check absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-xs"></i>
+            <div class="grid grid-cols-5 gap-1.5">
+              <div class="col-span-3 relative">
+                <input type="date" id="closedDate" name="closedDate" disabled onchange="handleDateTimeChange()" class="form-input-modern pr-8 font-medium text-xs">
+                <i class="fa-regular fa-calendar-check absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-xs"></i>
+              </div>
+              <div class="col-span-2 relative">
+                <input type="time" id="closedTime" name="closedTime" disabled onchange="handleDateTimeChange()" class="form-input-modern px-2 font-medium text-xs font-mono" title="Incident End Time">
+              </div>
             </div>
           </div>
 
@@ -486,10 +497,10 @@
 
         </div>
 
-        <!-- ROW 4: Enter Remarks Any -->
+        <!-- ROW 4: Remarks (Optional) -->
         <div>
           <label class="form-label-modern" for="remarks">
-            Enter Remarks Any
+            Remarks (Optional)
           </label>
           <textarea id="remarks" name="remarks" rows="2" placeholder="Enter root cause analysis, spare part part-number, or shift handover notes..." class="form-input-modern"></textarea>
         </div>
@@ -499,12 +510,11 @@
           
 
 
-          <div class="flex items-center gap-3">
-            <button type="button" onclick="resetForm()" class="btn-yoko-outline text-slate-600 hover:text-slate-900 font-bold bg-yellow-400/10 hover:bg-yellow-400/20 border-yellow-300 text-yellow-800">
-              <i class="fa-solid fa-eraser"></i> Clear Data
+          <div class="flex items-center justify-between w-full">
+            <button type="button" onclick="handleConfirmClearForm()" class="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-300 shadow-2xs transition-all active:scale-95 cursor-pointer">
+              <i class="fa-solid fa-eraser mr-1 text-slate-400"></i> Clear Form
             </button>
-            
-            <button type="submit" id="btn-save-record" class="btn-yoko-red">
+            <button type="submit" id="btn-save-record" class="btn-yoko-red shadow-lg active:scale-95">
               <i class="fa-solid fa-floppy-disk mr-1.5"></i> Save Data
             </button>
           </div>
@@ -1558,11 +1568,9 @@
           <!-- Dynamically populated from downtimeRecords in app.js -->
         </select>
 
-        <!-- Nature Filter -->
+        <!-- Nature Filter (UI-01: Populated dynamically strictly from Master Natures) -->
         <select id="filterNature" class="form-input-modern py-2 text-xs w-auto font-semibold">
-          <option value="ALL">All Nature</option>
-          <option value="MES">MES Only</option>
-          <option value="INFRA">INFRA Only</option>
+          <option value="ALL">All Natures</option>
         </select>
 
         <!-- Status Filter -->
@@ -1802,7 +1810,7 @@
             <h4 id="machFormTitle" class="text-sm font-black uppercase text-slate-800 tracking-wider flex items-center gap-2">
               <i class="fa-solid fa-plus-circle text-[#E60012]"></i> Add New Machine Code
             </h4>
-            <span id="machEditModeBadge" class="hidden text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">EDITING MODE</span>
+            <span id="machEditModeBadge" class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">ADD NEW</span>
           </div>
 
           <form id="formAddMachine" onsubmit="handleSaveMachineMaster(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
@@ -1890,7 +1898,7 @@
             <h4 id="natureFormTitle" class="text-sm font-black uppercase text-slate-800 tracking-wider flex items-center gap-2">
               <i class="fa-solid fa-plus-circle text-[#E60012]"></i> Add New Nature of Issue
             </h4>
-            <span id="natureEditModeBadge" class="hidden text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">EDITING MODE</span>
+            <span id="natureEditModeBadge" class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">ADD NEW</span>
           </div>
           <form id="formAddNature" onsubmit="handleSaveNatureMaster(event)" class="flex flex-col sm:flex-row items-end gap-3 max-w-xl">
             <input type="hidden" id="natureMasterEditingName" value="">
@@ -1929,7 +1937,7 @@
             <h4 id="catFormTitle" class="text-sm font-black uppercase text-slate-800 tracking-wider flex items-center gap-2">
               <i class="fa-solid fa-plus-circle text-[#E60012]"></i> Add New Failure Category
             </h4>
-            <span id="catEditModeBadge" class="hidden text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">EDITING MODE</span>
+            <span id="catEditModeBadge" class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">ADD NEW</span>
           </div>
           <form id="formAddCategory" onsubmit="handleSaveCategoryMaster(event)" class="flex flex-col sm:flex-row items-end gap-3 max-w-xl">
             <input type="hidden" id="catMasterEditingName" value="">
@@ -1968,7 +1976,7 @@
             <h4 id="areaFormTitle" class="text-sm font-black uppercase text-slate-800 tracking-wider flex items-center gap-2">
               <i class="fa-solid fa-plus-circle text-[#E60012]"></i> Add New Area / Plant Unit
             </h4>
-            <span id="areaEditModeBadge" class="hidden text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">EDITING MODE</span>
+            <span id="areaEditModeBadge" class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">ADD NEW</span>
           </div>
           <form id="formAddArea" onsubmit="handleSaveAreaMaster(event)" class="flex flex-col sm:flex-row items-end gap-3 max-w-xl">
             <input type="hidden" id="areaMasterEditingName" value="">
@@ -2007,7 +2015,7 @@
             <h4 id="respFormTitle" class="text-sm font-black uppercase text-slate-800 tracking-wider flex items-center gap-2">
               <i class="fa-solid fa-plus-circle text-[#E60012]"></i> Add New Responsibility Group
             </h4>
-            <span id="respEditModeBadge" class="hidden text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">EDITING MODE</span>
+            <span id="respEditModeBadge" class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">ADD NEW</span>
           </div>
           <form id="formAddResp" onsubmit="handleSaveRespMaster(event)" class="flex flex-col sm:flex-row items-end gap-3 max-w-xl">
             <input type="hidden" id="respMasterEditingName" value="">
@@ -2046,7 +2054,7 @@
             <h4 id="personnelFormTitle" class="text-sm font-black uppercase text-slate-800 tracking-wider flex items-center gap-2">
               <i class="fa-solid fa-user-plus text-[#E60012]"></i> Add New Responsible Person
             </h4>
-            <span id="personnelEditModeBadge" class="hidden text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">EDITING MODE</span>
+            <span id="personnelEditModeBadge" class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">ADD NEW</span>
           </div>
           <form id="formAddPersonnel" onsubmit="handleSavePersonnelMaster(event)" class="flex flex-col sm:flex-row items-end gap-3 max-w-xl">
             <input type="hidden" id="personnelMasterEditingName" value="">
@@ -2073,150 +2081,7 @@
             <span id="personnelMasterCountBadge" class="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-900 text-white font-mono">9 Persons</span>
           </div>
           <div id="personnelMasterGrid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 pt-2">
-            <div class="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between gap-2 shadow-2xs hover:bg-white hover:border-slate-300 transition-all group">
-              <div class="flex items-center gap-2 overflow-hidden">
-                <div class="w-6 h-6 rounded-full bg-red-50 text-[#E60012] border border-red-200 flex items-center justify-center font-bold text-[10px] shrink-0">
-                  B
-                </div>
-                <span class="font-bold text-xs text-slate-800 tracking-wide truncate" title="Bharadwaj">Bharadwaj</span>
-              </div>
-              <div class="flex items-center gap-1 shrink-0">
-                <button type="button" onclick="editPersonnelMaster('Bharadwaj')" class="p-1.5 text-slate-400 hover:text-blue-600 rounded transition-colors" title="Edit name">
-                  <i class="fa-solid fa-pencil text-xs"></i>
-                </button>
-                <button type="button" onclick="deletePersonnelMaster('Bharadwaj')" class="p-1.5 text-slate-400 hover:text-red-600 rounded transition-colors" title="Remove person">
-                  <i class="fa-solid fa-trash-can text-xs"></i>
-                </button>
-              </div>
-            </div>
-            <div class="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between gap-2 shadow-2xs hover:bg-white hover:border-slate-300 transition-all group">
-              <div class="flex items-center gap-2 overflow-hidden">
-                <div class="w-6 h-6 rounded-full bg-red-50 text-[#E60012] border border-red-200 flex items-center justify-center font-bold text-[10px] shrink-0">
-                  J
-                </div>
-                <span class="font-bold text-xs text-slate-800 tracking-wide truncate" title="Jagadeesh">Jagadeesh</span>
-              </div>
-              <div class="flex items-center gap-1 shrink-0">
-                <button type="button" onclick="editPersonnelMaster('Jagadeesh')" class="p-1.5 text-slate-400 hover:text-blue-600 rounded transition-colors" title="Edit name">
-                  <i class="fa-solid fa-pencil text-xs"></i>
-                </button>
-                <button type="button" onclick="deletePersonnelMaster('Jagadeesh')" class="p-1.5 text-slate-400 hover:text-red-600 rounded transition-colors" title="Remove person">
-                  <i class="fa-solid fa-trash-can text-xs"></i>
-                </button>
-              </div>
-            </div>
-            <div class="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between gap-2 shadow-2xs hover:bg-white hover:border-slate-300 transition-all group">
-              <div class="flex items-center gap-2 overflow-hidden">
-                <div class="w-6 h-6 rounded-full bg-red-50 text-[#E60012] border border-red-200 flex items-center justify-center font-bold text-[10px] shrink-0">
-                  S
-                </div>
-                <span class="font-bold text-xs text-slate-800 tracking-wide truncate" title="Srinivas">Srinivas</span>
-              </div>
-              <div class="flex items-center gap-1 shrink-0">
-                <button type="button" onclick="editPersonnelMaster('Srinivas')" class="p-1.5 text-slate-400 hover:text-blue-600 rounded transition-colors" title="Edit name">
-                  <i class="fa-solid fa-pencil text-xs"></i>
-                </button>
-                <button type="button" onclick="deletePersonnelMaster('Srinivas')" class="p-1.5 text-slate-400 hover:text-red-600 rounded transition-colors" title="Remove person">
-                  <i class="fa-solid fa-trash-can text-xs"></i>
-                </button>
-              </div>
-            </div>
-            <div class="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between gap-2 shadow-2xs hover:bg-white hover:border-slate-300 transition-all group">
-              <div class="flex items-center gap-2 overflow-hidden">
-                <div class="w-6 h-6 rounded-full bg-red-50 text-[#E60012] border border-red-200 flex items-center justify-center font-bold text-[10px] shrink-0">
-                  N
-                </div>
-                <span class="font-bold text-xs text-slate-800 tracking-wide truncate" title="Narayana">Narayana</span>
-              </div>
-              <div class="flex items-center gap-1 shrink-0">
-                <button type="button" onclick="editPersonnelMaster('Narayana')" class="p-1.5 text-slate-400 hover:text-blue-600 rounded transition-colors" title="Edit name">
-                  <i class="fa-solid fa-pencil text-xs"></i>
-                </button>
-                <button type="button" onclick="deletePersonnelMaster('Narayana')" class="p-1.5 text-slate-400 hover:text-red-600 rounded transition-colors" title="Remove person">
-                  <i class="fa-solid fa-trash-can text-xs"></i>
-                </button>
-              </div>
-            </div>
-            <div class="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between gap-2 shadow-2xs hover:bg-white hover:border-slate-300 transition-all group">
-              <div class="flex items-center gap-2 overflow-hidden">
-                <div class="w-6 h-6 rounded-full bg-red-50 text-[#E60012] border border-red-200 flex items-center justify-center font-bold text-[10px] shrink-0">
-                  P
-                </div>
-                <span class="font-bold text-xs text-slate-800 tracking-wide truncate" title="Pardhu">Pardhu</span>
-              </div>
-              <div class="flex items-center gap-1 shrink-0">
-                <button type="button" onclick="editPersonnelMaster('Pardhu')" class="p-1.5 text-slate-400 hover:text-blue-600 rounded transition-colors" title="Edit name">
-                  <i class="fa-solid fa-pencil text-xs"></i>
-                </button>
-                <button type="button" onclick="deletePersonnelMaster('Pardhu')" class="p-1.5 text-slate-400 hover:text-red-600 rounded transition-colors" title="Remove person">
-                  <i class="fa-solid fa-trash-can text-xs"></i>
-                </button>
-              </div>
-            </div>
-            <div class="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between gap-2 shadow-2xs hover:bg-white hover:border-slate-300 transition-all group">
-              <div class="flex items-center gap-2 overflow-hidden">
-                <div class="w-6 h-6 rounded-full bg-red-50 text-[#E60012] border border-red-200 flex items-center justify-center font-bold text-[10px] shrink-0">
-                  R
-                </div>
-                <span class="font-bold text-xs text-slate-800 tracking-wide truncate" title="Ramesh Kumar">Ramesh Kumar</span>
-              </div>
-              <div class="flex items-center gap-1 shrink-0">
-                <button type="button" onclick="editPersonnelMaster('Ramesh Kumar')" class="p-1.5 text-slate-400 hover:text-blue-600 rounded transition-colors" title="Edit name">
-                  <i class="fa-solid fa-pencil text-xs"></i>
-                </button>
-                <button type="button" onclick="deletePersonnelMaster('Ramesh Kumar')" class="p-1.5 text-slate-400 hover:text-red-600 rounded transition-colors" title="Remove person">
-                  <i class="fa-solid fa-trash-can text-xs"></i>
-                </button>
-              </div>
-            </div>
-            <div class="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between gap-2 shadow-2xs hover:bg-white hover:border-slate-300 transition-all group">
-              <div class="flex items-center gap-2 overflow-hidden">
-                <div class="w-6 h-6 rounded-full bg-red-50 text-[#E60012] border border-red-200 flex items-center justify-center font-bold text-[10px] shrink-0">
-                  K
-                </div>
-                <span class="font-bold text-xs text-slate-800 tracking-wide truncate" title="Karthik V">Karthik V</span>
-              </div>
-              <div class="flex items-center gap-1 shrink-0">
-                <button type="button" onclick="editPersonnelMaster('Karthik V')" class="p-1.5 text-slate-400 hover:text-blue-600 rounded transition-colors" title="Edit name">
-                  <i class="fa-solid fa-pencil text-xs"></i>
-                </button>
-                <button type="button" onclick="deletePersonnelMaster('Karthik V')" class="p-1.5 text-slate-400 hover:text-red-600 rounded transition-colors" title="Remove person">
-                  <i class="fa-solid fa-trash-can text-xs"></i>
-                </button>
-              </div>
-            </div>
-            <div class="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between gap-2 shadow-2xs hover:bg-white hover:border-slate-300 transition-all group">
-              <div class="flex items-center gap-2 overflow-hidden">
-                <div class="w-6 h-6 rounded-full bg-red-50 text-[#E60012] border border-red-200 flex items-center justify-center font-bold text-[10px] shrink-0">
-                  M
-                </div>
-                <span class="font-bold text-xs text-slate-800 tracking-wide truncate" title="MELSS Team">MELSS Team</span>
-              </div>
-              <div class="flex items-center gap-1 shrink-0">
-                <button type="button" onclick="editPersonnelMaster('MELSS Team')" class="p-1.5 text-slate-400 hover:text-blue-600 rounded transition-colors" title="Edit name">
-                  <i class="fa-solid fa-pencil text-xs"></i>
-                </button>
-                <button type="button" onclick="deletePersonnelMaster('MELSS Team')" class="p-1.5 text-slate-400 hover:text-red-600 rounded transition-colors" title="Remove person">
-                  <i class="fa-solid fa-trash-can text-xs"></i>
-                </button>
-              </div>
-            </div>
-            <div class="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between gap-2 shadow-2xs hover:bg-white hover:border-slate-300 transition-all group">
-              <div class="flex items-center gap-2 overflow-hidden">
-                <div class="w-6 h-6 rounded-full bg-red-50 text-[#E60012] border border-red-200 flex items-center justify-center font-bold text-[10px] shrink-0">
-                  A
-                </div>
-                <span class="font-bold text-xs text-slate-800 tracking-wide truncate" title="ATC IT Team">ATC IT Team</span>
-              </div>
-              <div class="flex items-center gap-1 shrink-0">
-                <button type="button" onclick="editPersonnelMaster('ATC IT Team')" class="p-1.5 text-slate-400 hover:text-blue-600 rounded transition-colors" title="Edit name">
-                  <i class="fa-solid fa-pencil text-xs"></i>
-                </button>
-                <button type="button" onclick="deletePersonnelMaster('ATC IT Team')" class="p-1.5 text-slate-400 hover:text-red-600 rounded transition-colors" title="Remove person">
-                  <i class="fa-solid fa-trash-can text-xs"></i>
-                </button>
-              </div>
-            </div>
+            <!-- Dynamically populated from master data post-authentication -->
           </div>
         </div>
       </div>
@@ -2250,6 +2115,10 @@
                 <div>
                   <label class="form-label-modern" for="userAdminUsername">Login Username <span class="required-star">*</span></label>
                   <input type="text" id="userAdminUsername" value="admin" required class="form-input-modern font-mono text-xs font-bold text-slate-800">
+                </div>
+                <div>
+                  <label class="form-label-modern" for="userAdminCurrentPass">Current Admin Password <span class="required-star">*</span></label>
+                  <input type="password" id="userAdminCurrentPass" required placeholder="Verify current admin password" class="form-input-modern text-xs font-mono">
                 </div>
                 <div>
                   <label class="form-label-modern" for="userAdminNewPass">New Password</label>
@@ -2304,6 +2173,10 @@
                   <input type="text" id="userSupervisorUsername" value="supervisor" required class="form-input-modern font-mono text-xs font-bold text-slate-800">
                 </div>
                 <div>
+                  <label class="form-label-modern" for="userSupervisorCurrentPass">Current Admin Password <span class="required-star">*</span></label>
+                  <input type="password" id="userSupervisorCurrentPass" required placeholder="Verify current admin password" class="form-input-modern text-xs font-mono">
+                </div>
+                <div>
                   <label class="form-label-modern" for="userSupervisorNewPass">New Password</label>
                   <div class="relative">
                     <input type="password" id="userSupervisorNewPass" placeholder="Leave blank to keep current" minlength="4" class="form-input-modern text-xs pr-8 font-mono">
@@ -2354,6 +2227,10 @@
                 <div>
                   <label class="form-label-modern" for="userOperatorUsername">Login Username <span class="required-star">*</span></label>
                   <input type="text" id="userOperatorUsername" value="operator" required class="form-input-modern font-mono text-xs font-bold text-slate-800">
+                </div>
+                <div>
+                  <label class="form-label-modern" for="userOperatorCurrentPass">Current Admin Password <span class="required-star">*</span></label>
+                  <input type="password" id="userOperatorCurrentPass" required placeholder="Verify current admin password" class="form-input-modern text-xs font-mono">
                 </div>
                 <div>
                   <label class="form-label-modern" for="userOperatorNewPass">New Password</label>
@@ -2454,17 +2331,17 @@
   </div><!-- End of #downtimeAppContainer -->
 
   <!-- =========================================================================
-       MODAL: FULL RECORD DETAILS VIEWER
+       MODAL: FULL RECORD DETAILS VIEWER (UI-06: Accessible Dialog)
        ========================================================================= -->
-  <div id="detailsModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop hidden">
-    <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6 relative border-t-4 border-[#E60012] animate-scale-up">
+  <div id="detailsModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="detailsModalTitle">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6 relative border-t-4 border-[#E60012] animate-scale-up" onclick="event.stopPropagation()">
       
-      <button onclick="closeDetailsModal()" class="absolute right-4 top-4 text-slate-400 hover:text-slate-800 p-2 rounded-lg">
+      <button onclick="closeDetailsModal()" class="absolute right-4 top-4 text-slate-400 hover:text-slate-800 p-2 rounded-lg" aria-label="Close dialog">
         <i class="fa-solid fa-xmark text-lg"></i>
       </button>
 
       <div class="pb-3 border-b border-slate-100 mb-3">
-        <span class="text-xs font-bold text-slate-400 font-mono">PLANT IT DOWNTIME TICKET</span>
+        <span id="detailsModalTitle" class="text-xs font-bold text-slate-400 font-mono">PLANT IT DOWNTIME TICKET</span>
       </div>
 
       <div id="modalDetailsContent">
@@ -2479,40 +2356,6 @@
 
     </div>
   </div>
-
-  <!-- Toast Notification Container -->
-  <div id="toast-container"></div>
-
-  <!-- Footer -->
-  <footer class="bg-[#0F1115] text-slate-400 text-xs py-6 border-t border-slate-800 mt-12 no-print">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-      <div class="flex items-center gap-3">
-        <div class="w-8 h-8 rounded-lg bg-red-600/20 border border-red-500/30 flex items-center justify-center text-[#E60012] shadow-xs">
-          <i class="fa-solid fa-industry text-sm"></i>
-        </div>
-        <div>
-          <span class="font-bold text-slate-200">Plant IT Downtime Management Portal</span>
-          <span class="text-slate-500 text-[11px] ml-2 hidden sm:inline">&bull; Yokohama Tire Operations</span>
-        </div>
-      </div>
-
-      <!-- Glassy Badge: Build by Hadssha Bell S & Reuben Geoffrey -->
-      <div class="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.15] hover:border-red-500/40 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.2)] transition-all duration-300 group">
-        <div class="relative flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-tr from-[#E60012]/50 via-red-500/30 to-white/20 border border-white/35 shadow-[inset_0_1px_2px_rgba(255,255,255,0.5),0_2px_8px_rgba(230,0,18,0.4)]">
-          <i class="fa-solid fa-code text-[#FF4D5E] text-[10px] group-hover:scale-110 transition-transform"></i>
-          <span class="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-        </div>
-        <span class="text-[11px] font-medium text-slate-300 tracking-wide">
-          Build by <span class="text-white font-extrabold tracking-normal">Hadssha Bell S</span> &amp; <span class="text-white font-extrabold tracking-normal">Reuben Geoffrey</span>
-        </span>
-      </div>
-    </div>
-  </footer>
-
-  <!-- Application Logic -->
-  <script src="app.js?v=5.4"></script>
-  <!-- Enterprise Observability & Advanced Visualizations Engine -->
-  <script src="observability-dashboard.js?v=1.0"></script>
 
   <!-- =========================================================================
        MODAL: EXPORT REPORT BY DATE OR MONTH (EXECUTIVE EXCEL & CSV)
@@ -2695,24 +2538,29 @@
           </div>
         </div>
 
-        <!-- Import Mode Selection -->
+        <!-- Import Mode Selection (SYNC-01: Default to Safe Append Mode) -->
         <div id="importModeContainer" class="hidden p-3.5 rounded-xl border border-slate-200 bg-white space-y-2">
           <label class="form-label-modern mb-1 block">Import Mode Option:</label>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-            <label class="flex items-center gap-2 p-2.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 cursor-pointer">
-              <input type="radio" name="importModeRadio" value="replace" checked class="text-[#E60012] focus:ring-red-500">
+            <label class="flex items-center gap-2 p-2.5 rounded-lg border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-50 cursor-pointer">
+              <input type="radio" id="importModeAppend" name="importModeRadio" value="append" checked onchange="handleImportModeChange()" class="text-emerald-600 focus:ring-emerald-500">
               <div>
-                <span class="font-bold text-slate-800 block">Replace Existing Logs</span>
-                <span class="text-[10px] text-slate-500">Overwrite current database with these imported records</span>
+                <span class="font-bold text-slate-800 block">Append to Existing Logs (Recommended)</span>
+                <span class="text-[10px] text-slate-500">Safely add imported incidents without erasing historical logs</span>
               </div>
             </label>
             <label class="flex items-center gap-2 p-2.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 cursor-pointer">
-              <input type="radio" name="importModeRadio" value="append" class="text-[#E60012] focus:ring-red-500">
+              <input type="radio" id="importModeReplace" name="importModeRadio" value="replace" onchange="handleImportModeChange()" class="text-[#E60012] focus:ring-red-500">
               <div>
-                <span class="font-bold text-slate-800 block">Append to Existing Logs</span>
-                <span class="text-[10px] text-slate-500">Add imported incidents without erasing existing entries</span>
+                <span class="font-bold text-slate-800 block">Replace Existing Logs (Admin Only)</span>
+                <span class="text-[10px] text-slate-500">Overwrite entire database with these imported records</span>
               </div>
             </label>
+          </div>
+          <!-- Red Warning Banner when Replace is selected -->
+          <div id="replaceWarningBanner" class="hidden p-3 rounded-lg bg-red-950/40 border border-red-500/50 text-red-300 text-xs flex items-center gap-2">
+            <i class="fa-solid fa-triangle-exclamation text-red-400 text-sm shrink-0"></i>
+            <span><strong>CRITICAL WARNING:</strong> Replace mode will permanently erase all historical incident logs and replace them. Admin authorization required.</span>
           </div>
         </div>
 
@@ -2765,6 +2613,47 @@
   </div>
 
   <!-- =========================================================================
+       MODAL: DESTRUCTIVE ACTION VERIFICATION (SEC-07: Admin Only + CONFIRM RESET)
+       ========================================================================= -->
+  <div id="confirmResetModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="confirmResetTitle">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border-t-4 border-rose-600 animate-scale-up" onclick="event.stopPropagation()">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-12 h-12 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 text-xl shrink-0">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <div>
+          <h3 id="confirmResetTitle" class="text-base font-black text-slate-900 tracking-tight">Confirm Destructive Action</h3>
+          <p id="confirmResetSubtitle" class="text-xs text-slate-500">Administrator authorization and typing confirmation required</p>
+        </div>
+      </div>
+
+      <div class="p-3.5 rounded-xl bg-rose-50/70 border border-rose-200 mb-4 text-xs text-rose-800 leading-relaxed">
+        <p id="confirmResetDescription">
+          This operation is permanent and cannot be undone. An automatic backup snapshot will be downloaded to your computer immediately before execution.
+        </p>
+      </div>
+
+      <div class="space-y-3 mb-5">
+        <label for="confirmResetInput" class="block text-xs font-bold text-slate-700">
+          Type <span class="font-mono bg-slate-100 text-rose-600 px-1.5 py-0.5 rounded border border-slate-200 select-all">CONFIRM RESET</span> to proceed:
+        </label>
+        <input type="text" id="confirmResetInput" placeholder="CONFIRM RESET" autocomplete="off" class="form-input-modern text-xs font-mono font-bold tracking-wider" oninput="handleConfirmResetInputChanged()">
+        <p id="confirmResetError" class="text-[11px] font-bold text-rose-600 hidden">Confirmation phrase does not match.</p>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+        <button type="button" onclick="closeConfirmResetModal()" class="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-800 transition-colors">
+          Cancel
+        </button>
+        <button type="button" id="btnExecuteDestructiveAction" disabled onclick="executeDestructiveActionConfirmed()" class="px-5 py-2 text-xs font-black rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed text-white flex items-center gap-1.5 shadow-sm transition-all active:scale-95">
+          <i class="fa-solid fa-trash-can"></i>
+          <span id="confirmResetBtnLabel">Execute Reset</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
        GLOBAL COMMAND PALETTE MODAL (CTRL+K / CMD+K)
        ========================================================================= -->
   <div id="cmdPaletteBackdrop" class="cmd-palette-backdrop hidden" onclick="closeCommandPalette()">
@@ -2789,6 +2678,42 @@
       </div>
     </div>
   </div>
+
+  </template><!-- End of #authenticatedAppTemplate -->
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container"></div>
+
+  <!-- Footer -->
+  <footer class="bg-[#0F1115] text-slate-400 text-xs py-6 border-t border-slate-800 mt-12 no-print">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-red-600/20 border border-red-500/30 flex items-center justify-center text-[#E60012] shadow-xs">
+          <i class="fa-solid fa-industry text-sm"></i>
+        </div>
+        <div>
+          <span class="font-bold text-slate-200">Plant IT Downtime Management Portal</span>
+          <span class="text-slate-500 text-[11px] ml-2 hidden sm:inline">&bull; Yokohama Tire Operations</span>
+        </div>
+      </div>
+
+      <!-- Glassy Badge: Built by Hadssha Bell S & Reuben Geoffrey -->
+      <div class="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.15] hover:border-red-500/40 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.2)] transition-all duration-300 group">
+        <div class="relative flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-tr from-[#E60012]/50 via-red-500/30 to-white/20 border border-white/35 shadow-[inset_0_1px_2px_rgba(255,255,255,0.5),0_2px_8px_rgba(230,0,18,0.4)]">
+          <i class="fa-solid fa-code text-[#FF4D5E] text-[10px] group-hover:scale-110 transition-transform"></i>
+          <span class="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+        </div>
+        <span class="text-[11px] font-medium text-slate-300 tracking-wide">
+          Built by <span class="text-white font-extrabold tracking-normal">Hadssha Bell S</span> &amp; <span class="text-white font-extrabold tracking-normal">Reuben Geoffrey</span>
+        </span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Application Logic -->
+  <script src="app.js?v=5.4"></script>
+  <!-- Enterprise Observability & Advanced Visualizations Engine -->
+  <script src="observability-dashboard.js?v=1.0"></script>
 
 </body>
 </html>

@@ -80,6 +80,9 @@ function mapRowToRecord(row) {
     id: String(row.id),
     date: recDate,
     issueDate: recDate,
+    issueTime: row.issue_time || '',
+    closedTime: row.closed_time || '',
+    shift: row.shift || '',
     nature: row.nature || 'MES',
     area: row.area || 'Plant-1',
     process: row.process || 'General',
@@ -98,6 +101,10 @@ function mapRowToRecord(row) {
     responsiblePerson: resp,
     status: row.status || 'Open',
     remarks: row.remarks || '',
+    createdBy: row.created_by || '',
+    createdByName: row.created_by_name || '',
+    updatedBy: row.updated_by || '',
+    actorName: row.actor_name || row.created_by_name || '',
     createdAt: row.created_at || new Date().toISOString(),
     updatedAt: row.updated_at || new Date().toISOString()
   };
@@ -133,6 +140,13 @@ function mapRecordToRow(record) {
     responsible_person: resp,
     status: record.status || 'Open',
     remarks: record.remarks || '',
+    issue_time: record.issueTime || '',
+    closed_time: record.closedTime || '',
+    shift: record.shift || '',
+    created_by: record.createdBy || '',
+    created_by_name: record.createdByName || record.actorName || '',
+    updated_by: record.updatedBy || '',
+    actor_name: record.actorName || record.createdByName || '',
     updated_at: new Date().toISOString()
   };
 }
@@ -412,9 +426,9 @@ async function clearAllCloudIncidents(confirmPhrase = '') {
 window.clearAllCloudIncidents = clearAllCloudIncidents;
 
 // ----------------------------------------------------------------------------
-// 7. Update User Account Credentials (Admin Only)
+// 7. Update User Account Credentials (Admin Only with Current Password Check)
 // ----------------------------------------------------------------------------
-async function updateCloudUserAccount(role, username, displayName, password) {
+async function updateCloudUserAccount(role, username, displayName, password, currentPassword) {
   const token = getSessionToken();
   const env = getRuntimeEnvironment();
   if (token && env.isOnline) {
@@ -425,13 +439,17 @@ async function updateCloudUserAccount(role, username, displayName, password) {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ role, username, displayName, password })
+        body: JSON.stringify({ role, username, displayName, password, currentPassword })
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        const data = await res.json();
         return { success: true, updated: data.user };
+      } else {
+        return { success: false, error: data.error || 'Server rejected credential update' };
       }
-    } catch (e) {}
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
   }
 
   // Fallback: Direct PostgREST
@@ -461,11 +479,89 @@ async function updateCloudUserAccount(role, username, displayName, password) {
       const list = await res.json();
       return { success: true, updated: list[0] };
     }
-  } catch (err) {}
-
-  return { success: false };
+    return { success: false, error: 'Database rejected update' };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
 }
 window.updateCloudUserAccount = updateCloudUserAccount;
+
+// ----------------------------------------------------------------------------
+// 8. Offline Mutation Queue & Network Reconnection Sync (SYNC-05)
+// ----------------------------------------------------------------------------
+const MUTATION_QUEUE_KEY = 'YOKOHAMA_PENDING_MUTATIONS';
+
+function getPendingMutationQueue() {
+  try {
+    return JSON.parse(localStorage.getItem(MUTATION_QUEUE_KEY) || '[]');
+  } catch (e) {
+    return [];
+  }
+}
+
+function queueMutation(type, payload) {
+  const queue = getPendingMutationQueue();
+  queue.push({
+    id: 'mut_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+    type,
+    payload,
+    timestamp: new Date().toISOString()
+  });
+  localStorage.setItem(MUTATION_QUEUE_KEY, JSON.stringify(queue));
+  updateSyncStatusBadge();
+}
+
+async function flushMutationQueue() {
+  const queue = getPendingMutationQueue();
+  if (!queue || queue.length === 0) return;
+
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+
+  const remaining = [];
+  for (const item of queue) {
+    try {
+      if (item.type === 'INSERT_INCIDENT') {
+        const ok = await insertCloudIncident(item.payload);
+        if (!ok) remaining.push(item);
+      } else if (item.type === 'UPDATE_INCIDENT') {
+        const ok = await updateCloudIncident(item.payload);
+        if (!ok) remaining.push(item);
+      } else if (item.type === 'DELETE_INCIDENT') {
+        const ok = await deleteCloudIncident(item.payload.id);
+        if (!ok) remaining.push(item);
+      }
+    } catch (e) {
+      remaining.push(item);
+    }
+  }
+  localStorage.setItem(MUTATION_QUEUE_KEY, JSON.stringify(remaining));
+  updateSyncStatusBadge();
+}
+
+function updateSyncStatusBadge() {
+  if (typeof document === 'undefined') return;
+  const count = getPendingMutationQueue().length;
+  const badge = document.getElementById('offlineSyncBadge');
+  if (badge) {
+    if (count > 0) {
+      badge.classList.remove('hidden');
+      badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span><span>${count} Pending Sync</span>`;
+    } else {
+      badge.classList.add('hidden');
+    }
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => {
+    console.log('[Sync] Network reconnected. Flushing mutation queue...');
+    flushMutationQueue();
+  });
+  window.getPendingMutationQueue = getPendingMutationQueue;
+  window.queueMutation = queueMutation;
+  window.flushMutationQueue = flushMutationQueue;
+  window.updateSyncStatusBadge = updateSyncStatusBadge;
+}
 
 // Deprecated: Never expose all user accounts or password hashes to the client
 window.fetchCloudUserAccounts = async function() {

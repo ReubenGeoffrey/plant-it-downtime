@@ -1,3 +1,4 @@
+const bcrypt = require('bcryptjs');
 const {
   SUPABASE_URL,
   SUPABASE_KEY,
@@ -9,6 +10,32 @@ const {
   recordFailedLogin,
   clearRateLimit
 } = require('./utils');
+
+// Helper to verify bcrypt, sha256, or plaintext passwords
+function verifyPassword(rawPassword, storedHashOrPassword) {
+  if (!rawPassword || !storedHashOrPassword) return false;
+  const raw = String(rawPassword).trim();
+  const stored = String(storedHashOrPassword).trim();
+
+  // 1. Bcrypt hash check ($2a$ or $2b$)
+  if (stored.startsWith('$2a$') || stored.startsWith('$2b$')) {
+    try {
+      if (bcrypt.compareSync(raw, stored)) return true;
+    } catch (e) {}
+  }
+
+  // 2. SHA-256 hash check
+  if (sha256(raw).toLowerCase() === stored.toLowerCase()) {
+    return true;
+  }
+
+  // 3. Plaintext fallback (for initial seeds)
+  if (raw === stored) {
+    return true;
+  }
+
+  return false;
+}
 
 module.exports = async function handler(req, res) {
   setCorsHeaders(res);
@@ -40,12 +67,10 @@ module.exports = async function handler(req, res) {
         });
       }
 
-      const pHash = sha256(rawPassword);
-
       // Authenticate directly against Supabase user_accounts table if reachable
       let userRow = null;
       try {
-        const queryUrl = `${SUPABASE_URL}/rest/v1/user_accounts?select=*&username=ilike.${encodeURIComponent(cleanUser)}&password_hash=eq.${encodeURIComponent(pHash)}&limit=1`;
+        const queryUrl = `${SUPABASE_URL}/rest/v1/user_accounts?select=*&username=ilike.${encodeURIComponent(cleanUser)}&limit=1`;
         const sRes = await fetch(queryUrl, {
           method: 'GET',
           headers: {
@@ -57,7 +82,10 @@ module.exports = async function handler(req, res) {
         if (sRes.ok) {
           const rows = await sRes.json();
           if (Array.isArray(rows) && rows.length > 0) {
-            userRow = rows[0];
+            const row = rows[0];
+            if (verifyPassword(rawPassword, row.password_hash)) {
+              userRow = row;
+            }
           }
         }
       } catch (cloudErr) {
@@ -109,16 +137,20 @@ module.exports = async function handler(req, res) {
         };
 
         const seed = seedUsers[cleanUser];
-        if (seed && (seed.passwords.includes(rawPassword) || seed.hashes.includes(pHash))) {
-          userRow = {
-            id: seed.id,
-            username: seed.username,
-            role: seed.role,
-            display_name: seed.display_name,
-            can_export: seed.can_export,
-            can_manage_settings: seed.can_manage_settings,
-            theme_color: seed.theme_color
-          };
+        if (seed) {
+          const isMatch = (seed.passwords && seed.passwords.some(p => p === rawPassword)) ||
+                          (seed.hashes && seed.hashes.some(h => verifyPassword(rawPassword, h)));
+          if (isMatch) {
+            userRow = {
+              id: seed.id,
+              username: seed.username,
+              role: seed.role,
+              display_name: seed.display_name,
+              can_export: seed.can_export,
+              can_manage_settings: seed.can_manage_settings,
+              theme_color: seed.theme_color
+            };
+          }
         }
       }
 
@@ -177,13 +209,13 @@ module.exports = async function handler(req, res) {
     });
   }
 
-  // 3. PUT /api/auth (Update user credentials - Admin only)
+  // 3. PUT /api/auth (Update user credentials - Admin only, requires currentPassword check)
   if (req.method === 'PUT') {
     const adminUser = requireAuth(req, res, ['ADMIN']);
     if (!adminUser) return; // 401/403 already sent
 
     try {
-      const { role, username, displayName, password } = req.body || {};
+      const { role, username, displayName, password, currentPassword } = req.body || {};
       const targetRole = String(role || '').toUpperCase().trim();
       const cleanUsername = String(username || '').toLowerCase().trim();
 
@@ -195,7 +227,36 @@ module.exports = async function handler(req, res) {
         return res.status(400).json({ error: 'Invalid user role specified' });
       }
 
-      // Check username collision across other accounts
+      // SEC-03: Mandatory Current Password Verification before resetting credentials
+      if (!currentPassword) {
+        return res.status(400).json({ error: 'Current Password verification is required to update credentials' });
+      }
+
+      // Fetch admin user record to verify current password
+      let adminVerified = false;
+      try {
+        const adminCheckUrl = `${SUPABASE_URL}/rest/v1/user_accounts?select=password_hash&role=eq.ADMIN&limit=1`;
+        const aRes = await fetch(adminCheckUrl, {
+          headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+        });
+        if (aRes.ok) {
+          const rows = await aRes.json();
+          if (Array.isArray(rows) && rows.length > 0) {
+            adminVerified = verifyPassword(currentPassword, rows[0].password_hash);
+          }
+        }
+      } catch (e) {}
+
+      // Fallback check against seed admin password
+      if (!adminVerified) {
+        adminVerified = (currentPassword === 'admin123' || sha256(currentPassword) === '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9');
+      }
+
+      if (!adminVerified) {
+        return res.status(401).json({ error: 'Current password verification failed: Incorrect current password' });
+      }
+
+      // SEC-04: Prevent login username collisions across roles
       const checkUrl = `${SUPABASE_URL}/rest/v1/user_accounts?select=role,username&username=ilike.${encodeURIComponent(cleanUsername)}&role=neq.${encodeURIComponent(targetRole)}`;
       const cRes = await fetch(checkUrl, {
         method: 'GET',
@@ -213,8 +274,10 @@ module.exports = async function handler(req, res) {
         updated_at: new Date().toISOString()
       };
       if (displayName) patch.display_name = String(displayName).trim();
+      
+      // Hash with bcryptjs
       if (password && String(password).trim().length >= 4) {
-        patch.password_hash = sha256(String(password).trim());
+        patch.password_hash = bcrypt.hashSync(String(password).trim(), 10);
       }
 
       const updateUrl = `${SUPABASE_URL}/rest/v1/user_accounts?role=eq.${encodeURIComponent(targetRole)}`;
@@ -252,6 +315,14 @@ module.exports = async function handler(req, res) {
       return res.status(500).json({ error: 'Failed to update user account', message: err.message });
     }
   }
+
+  // 4. DELETE /api/auth (Session Logout acknowledgement)
+  if (req.method === 'DELETE') {
+    return res.status(200).json({ message: 'Session logged out successfully' });
+  }
+
+  return res.status(405).json({ error: `Method ${req.method} not allowed` });
+};
 
   // 4. DELETE /api/auth (Session Logout acknowledgement)
   if (req.method === 'DELETE') {

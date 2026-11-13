@@ -70,12 +70,18 @@ module.exports = async function handler(req, res) {
 
     const standardAreasCount = 8;
     const totalOperatingMinutes = periodDays * 24 * 60 * standardAreasCount;
-    const totalDowntimeMinutes = records.reduce((acc, r) => acc + (parseInt(r.downtimeMinutes, 10) || 0), 0);
+    const totalWallClockDowntimeMinutes = records.reduce((acc, r) => acc + (parseInt(r.downtimeMinutes, 10) || 0), 0);
+    const totalEquipmentDowntimeMinutes = records.reduce((acc, r) => {
+      const dt = parseInt(r.downtimeMinutes, 10) || 0;
+      const aff = parseInt(r.affectedMachines, 10) || 1;
+      return acc + (dt * aff);
+    }, 0);
+    const totalDowntimeMinutes = totalWallClockDowntimeMinutes;
 
     const hasOperatingData = hasRecords || (periodDays > 0);
 
     // Authoritative calculations
-    const availability = calculateAuthoritativeAvailability(totalOperatingMinutes, totalDowntimeMinutes, hasOperatingData);
+    const availability = calculateAuthoritativeAvailability(totalOperatingMinutes, totalWallClockDowntimeMinutes, hasOperatingData);
     const closure = calculateAuthoritativeClosureRate(records);
     const mttr = calculateAuthoritativeMTTR(records);
 
@@ -93,7 +99,10 @@ module.exports = async function handler(req, res) {
       periodDays,
       totalOperatingMinutes,
       totalDowntimeMinutes,
-      totalDowntimeHours: parseFloat((totalDowntimeMinutes / 60).toFixed(1)),
+      totalWallClockDowntimeMinutes,
+      totalEquipmentDowntimeMinutes,
+      totalDowntimeHours: parseFloat((totalWallClockDowntimeMinutes / 60).toFixed(1)),
+      totalEquipmentDowntimeHours: parseFloat((totalEquipmentDowntimeMinutes / 60).toFixed(1)),
       totalIncidents: records.length,
       openCount,
       completedCount,

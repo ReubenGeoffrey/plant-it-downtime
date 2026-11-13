@@ -3573,37 +3573,223 @@ window.setSpeedometerColor = function(theme) {
   showToast(`Speedometer theme: ${names[theme] || theme}`, "info");
 };
 
+// --- Timestamp & Shift Auto-Tracking (MATH-04) ---
+window.handleDateTimeChange = function() {
+  const issueDateEl = document.getElementById("issueDate");
+  const issueTimeEl = document.getElementById("issueTime");
+  const closedDateEl = document.getElementById("closedDate");
+  const closedTimeEl = document.getElementById("closedTime");
+  const downtimeMinutesEl = document.getElementById("downtimeMinutes");
+
+  const issueDate = issueDateEl?.value;
+  const issueTime = issueTimeEl?.value;
+  const closedDate = closedDateEl?.value;
+  const closedTime = closedTimeEl?.value;
+
+  // 1. Shift determination from start time (Shift A: 07:00-14:59, Shift B: 15:00-22:59, Shift C: 23:00-06:59)
+  if (issueTime) {
+    const [h] = issueTime.split(':').map(Number);
+    let shiftName = "Shift A (07:00 - 15:00)";
+    if (h >= 7 && h < 15) {
+      shiftName = "Shift A (07:00 - 15:00)";
+    } else if (h >= 15 && h < 23) {
+      shiftName = "Shift B (15:00 - 23:00)";
+    } else {
+      shiftName = "Shift C (23:00 - 07:00)";
+    }
+    const shiftInput = document.getElementById("shift");
+    if (shiftInput) shiftInput.value = shiftName;
+  }
+
+  // 2. Duration calculation
+  if (issueDate && issueTime && closedDate && closedTime) {
+    const start = new Date(`${issueDate}T${issueTime}`);
+    const end = new Date(`${closedDate}T${closedTime}`);
+    const diffMs = end.getTime() - start.getTime();
+    if (diffMs > 0) {
+      const mins = Math.round(diffMs / 60000);
+      if (downtimeMinutesEl) {
+        downtimeMinutesEl.value = mins;
+        const affEl = document.getElementById("affectedMachines");
+        const aff = parseInt(affEl?.value, 10) || 1;
+        const totEl = document.getElementById("totalDowntimeMinutes");
+        if (totEl) totEl.value = mins * aff;
+      }
+    }
+  }
+};
+
+// --- Mount / Unmount Authenticated Application Shell (SEC-01) ---
+window.mountAuthenticatedApp = function(currentUser) {
+  if (!currentUser) return;
+
+  const appMountRoot = document.getElementById("appMountRoot");
+  const template = document.getElementById("authenticatedAppTemplate");
+  if (!appMountRoot) return;
+
+  // Check if container already mounted
+  let existingContainer = document.getElementById("downtimeAppContainer");
+  if (!existingContainer && template) {
+    const gatekeeper = document.getElementById("adminGatekeeperSection");
+    if (gatekeeper) gatekeeper.classList.add("hidden");
+
+    // Clone template inert document fragment
+    const clone = template.content.cloneNode(true);
+
+    // Conditional Component Mounting & RBAC View Stripping (SEC-01)
+    if (currentUser.role === "OPERATOR") {
+      clone.querySelector("#tabBtnKpi")?.remove();
+      clone.querySelector("#tabBtnLogs")?.remove();
+      clone.querySelector("#tabBtnAll")?.remove();
+      clone.querySelector("#tabBtnSettings")?.remove();
+      clone.querySelector("#kpiView")?.remove();
+      clone.querySelector("#logsView")?.remove();
+      clone.querySelector("#settingsView")?.remove();
+      clone.querySelector("#sectionAdvancedBars")?.remove();
+      clone.querySelector("#headerExportButtons")?.remove();
+      clone.querySelector("#btn-add-technician")?.remove();
+    } else if (currentUser.role === "SUPERVISOR") {
+      clone.querySelector("#tabBtnSettings")?.remove();
+      clone.querySelector("#settingsView")?.remove();
+      clone.querySelector("#btnEmptyIncidentLogs")?.remove();
+    }
+
+    appMountRoot.appendChild(clone);
+
+    // Initialize all components on mounted elements
+    initFormControls();
+    initMachineMultiSelectDropdown();
+    initAreaMultiSelectDropdown();
+    initFormAreaDropdown();
+    initFormMachineDropdown();
+    initAreasDropdowns();
+    initProcessesDropdowns();
+    initTechniciansDropdown();
+    initCategoryDropdowns();
+    initResponsibilityDropdown();
+    initNatureSelector();
+    initNatureFilterDropdown();
+    initMachineSelector();
+    populateDefaultDates();
+    setupDependentDropdowns();
+    setupEventListeners();
+    populateDashboardMonths();
+
+    if (currentUser.role === "ADMIN") {
+      renderMasterSettingsUI();
+    }
+
+    // Modal click dismiss handlers
+    ["detailsModal", "dateExportModal", "importDowntimeModal", "confirmResetModal"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener("click", (e) => {
+          if (e.target === el) {
+            if (id === "detailsModal") closeDetailsModal();
+            else if (id === "dateExportModal") closeDateExportModal();
+            else if (id === "importDowntimeModal") closeImportDowntimeModal();
+            else if (id === "confirmResetModal") closeConfirmResetModal();
+          }
+        });
+      }
+    });
+
+    if (typeof window.initObservabilityDashboard === "function") {
+      try { window.initObservabilityDashboard(); } catch (e) {}
+    }
+    if (typeof window.initCommandPalette === "function") {
+      try { window.initCommandPalette(); } catch (e) {}
+    }
+  }
+
+  updateAuthUI(currentUser);
+  const targetTab = (currentUser.allowedTabs && currentUser.allowedTabs.includes(activeTab)) ? activeTab : (currentUser.role === "OPERATOR" ? "entry" : "all");
+  switchTab(targetTab);
+
+  fetchAuthenticatedCloudData(currentUser);
+};
+
+window.unmountAuthenticatedApp = function() {
+  const gatekeeper = document.getElementById("adminGatekeeperSection");
+  const appContainer = document.getElementById("downtimeAppContainer");
+
+  if (appContainer) {
+    appContainer.remove();
+  }
+  ["detailsModal", "dateExportModal", "importDowntimeModal", "confirmResetModal", "cmdPaletteBackdrop"].forEach(id => {
+    document.getElementById(id)?.remove();
+  });
+
+  if (gatekeeper) {
+    gatekeeper.classList.remove("hidden");
+  }
+
+  updateAuthUI(null);
+};
+
+async function fetchAuthenticatedCloudData(user) {
+  if (!user) return;
+  const token = typeof getSessionToken === "function" ? getSessionToken() : (sessionStorage.getItem("YOKOHAMA_SESSION_TOKEN") || localStorage.getItem("YOKOHAMA_SESSION_TOKEN"));
+  const env = typeof getRuntimeEnvironment === "function" ? getRuntimeEnvironment() : { isOnline: true };
+
+  if (env.isOnline && token) {
+    try {
+      // 1. Fetch Master Data
+      const mRes = await fetch("/api/master-data", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (mRes.ok) {
+        const mData = await mRes.json();
+        if (mData) {
+          if (Array.isArray(mData.areas) && mData.areas.length > 0) YOKOHAMA_AREAS = mData.areas;
+          if (Array.isArray(mData.categories) && mData.categories.length > 0) masterCategories = mData.categories;
+          if (Array.isArray(mData.natures) && mData.natures.length > 0) masterNatures = mData.natures;
+          if (Array.isArray(mData.responsibilities) && mData.responsibilities.length > 0) masterResponsibilities = mData.responsibilities;
+          if (Array.isArray(mData.technicians) && mData.technicians.length > 0) technicians = mData.technicians;
+          
+          initAreasDropdowns();
+          initCategoryDropdowns();
+          initNatureSelector();
+          initNatureFilterDropdown();
+          initResponsibilityDropdown();
+          initTechniciansDropdown();
+        }
+      }
+
+      // 2. Fetch Incidents
+      const iRes = await fetch("/api/incidents", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (iRes.ok) {
+        const iData = await iRes.json();
+        if (iData && Array.isArray(iData.records)) {
+          downtimeRecords = iData.records;
+          window.downtimeRecords = downtimeRecords;
+          saveToStorage();
+          renderRecordsTable();
+          renderKPIs();
+          renderCharts();
+          populateDashboardMonths();
+          updateMaintenanceLogCount();
+        }
+      }
+    } catch (e) {
+      console.warn("Cloud data fetch warning:", e);
+    }
+  }
+}
+
 // --- Initialization ---
 document.addEventListener("DOMContentLoaded", async () => {
   initLiveClock();
   await initStorage();
-  initFormControls();
-  initMachineMultiSelectDropdown();
-  initAreaMultiSelectDropdown();
-  initFormAreaDropdown();
-  initFormMachineDropdown();
-  initAreasDropdowns();
-  initProcessesDropdowns();
-  initTechniciansDropdown();
-  initCategoryDropdowns();
-  initResponsibilityDropdown();
-  initNatureSelector();
-  initNatureFilterDropdown();
-  initMachineSelector();
-  renderMasterSettingsUI();
-  populateDefaultDates();
   initAuthSystem();
-  setupDependentDropdowns();
-  setupEventListeners();
-  populateDashboardMonths();
 
   const currentUser = getCurrentUser();
   if (currentUser) {
-    updateAuthUI(currentUser);
-    const targetTab = currentUser.allowedTabs.includes(activeTab) ? activeTab : (currentUser.allowedTabs[0] || 'entry');
-    switchTab(targetTab);
+    mountAuthenticatedApp(currentUser);
   } else {
-    updateAuthUI(null);
+    unmountAuthenticatedApp();
   }
 });
 
@@ -3682,9 +3868,7 @@ window.quickLoginRole = function(roleKey) {
   }
   localStorage.setItem("YOKOHAMA_CURRENT_USER", JSON.stringify(user));
   localStorage.setItem("YOKOHAMA_ADMIN_LOGGED_IN", "true");
-  updateAuthUI(user);
-  const targetTab = user.role === "OPERATOR" ? "entry" : (activeTab || "all");
-  switchTab(targetTab);
+  mountAuthenticatedApp(user);
   showToast(`Signed in as ${user.displayName} (${user.role})!`, "success");
 };
 
@@ -3693,7 +3877,7 @@ window.handleUserLogout = function() {
   localStorage.removeItem("YOKOHAMA_ADMIN_LOGGED_IN");
   sessionStorage.removeItem("YOKOHAMA_SESSION_TOKEN");
   localStorage.removeItem("YOKOHAMA_SESSION_TOKEN");
-  updateAuthUI(null);
+  unmountAuthenticatedApp();
   const userEl = document.getElementById("adminUsername");
   const passEl = document.getElementById("adminPassword");
   if (userEl) { userEl.value = ""; userEl.focus(); }
@@ -3931,10 +4115,7 @@ function initAuthSystem() {
         if (matchedUser) {
           localStorage.setItem("YOKOHAMA_CURRENT_USER", JSON.stringify(matchedUser));
           localStorage.setItem("YOKOHAMA_ADMIN_LOGGED_IN", "true");
-          updateAuthUI(matchedUser);
-
-          const targetTab = matchedUser.role === "OPERATOR" ? "entry" : (activeTab || "all");
-          switchTab(targetTab);
+          mountAuthenticatedApp(matchedUser);
           showToast(`Welcome ${matchedUser.displayName}! Signed in as ${matchedUser.role}.`, "success");
         } else {
           showToast("Invalid username or password. Please verify your credentials.", "error");
@@ -4023,6 +4204,18 @@ function updateAuthUI(currentUser) {
     if (btnEmptyLogs) {
       if (currentUser.role === "ADMIN") btnEmptyLogs.classList.remove("hidden");
       else btnEmptyLogs.classList.add("hidden");
+    }
+
+    // Role-based visibility of Quick Add Technician button (Supervisor & Admin only - UI-03)
+    const btnAddNewTech = document.getElementById("btn-add-technician");
+    if (btnAddNewTech) {
+      if (currentUser.role === "OPERATOR") {
+        btnAddNewTech.classList.add("hidden");
+        btnAddNewTech.disabled = true;
+      } else {
+        btnAddNewTech.classList.remove("hidden");
+        btnAddNewTech.disabled = false;
+      }
     }
 
     // Header Role Badge & Logout
@@ -5107,11 +5300,13 @@ window.handleUpdateUserAccount = async function(e, roleKey) {
   const cap = roleKey.charAt(0).toUpperCase() + roleKey.slice(1);
   const dispEl = document.getElementById(`user${cap}DisplayName`);
   const userEl = document.getElementById(`user${cap}Username`);
+  const curPassEl = document.getElementById(`user${cap}CurrentPass`);
   const passEl = document.getElementById(`user${cap}NewPass`);
   const confEl = document.getElementById(`user${cap}ConfirmPass`);
 
   const newDisplayName = (dispEl?.value || "").trim();
   const newUsername = (userEl?.value || "").trim();
+  const currentPass = (curPassEl?.value || "").trim();
   const newPass = (passEl?.value || "").trim();
   const confPass = (confEl?.value || "").trim();
 
@@ -5121,7 +5316,14 @@ window.handleUpdateUserAccount = async function(e, roleKey) {
     return;
   }
 
-  // Check duplicate username across other accounts
+  // SEC-03: Mandatory Current Password Verification
+  if (!currentPass) {
+    showToast("Current Admin Password verification is mandatory to update credentials!", "warning");
+    if (curPassEl) curPassEl.focus();
+    return;
+  }
+
+  // SEC-04: Check duplicate username across other accounts
   for (const key of Object.keys(USER_ACCOUNTS)) {
     if (key !== roleKey) {
       const otherAcc = USER_ACCOUNTS[key];
@@ -5152,26 +5354,29 @@ window.handleUpdateUserAccount = async function(e, roleKey) {
     passwordChanged = true;
   }
 
-  acc.username = newUsername;
-  delete acc.plainPassword;
-  if (newDisplayName) acc.displayName = newDisplayName;
-
-  saveUserAccountsToStorage();
-
+  // SEC-03 & SEC-04: Authoritative Server Verification via /api/auth (PUT)
   let cloudSuccess = false;
   let cloudReason = null;
   if (typeof window.updateCloudUserAccount === "function") {
     try {
-      const cloudRes = await window.updateCloudUserAccount(acc.role, acc.username, acc.displayName, acc.passwordHash);
+      const cloudRes = await window.updateCloudUserAccount(acc.role, newUsername, newDisplayName, newPass, currentPass);
       if (cloudRes && cloudRes.success) {
         cloudSuccess = true;
-      } else if (cloudRes && cloudRes.reason === 'RLS_BLOCKED') {
-        cloudReason = 'RLS_BLOCKED';
+      } else {
+        showToast(cloudRes.error || "Current password verification failed on server. Credentials not updated.", "error");
+        if (curPassEl) { curPassEl.value = ""; curPassEl.focus(); }
+        return;
       }
     } catch (e) {
       console.warn("[Supabase] Cloud user sync warning:", e);
     }
   }
+
+  acc.username = newUsername;
+  delete acc.plainPassword;
+  if (newDisplayName) acc.displayName = newDisplayName;
+
+  saveUserAccountsToStorage();
 
   // If the updated user is currently logged in, sync session
   const currentUser = getCurrentUser();
@@ -5181,6 +5386,7 @@ window.handleUpdateUserAccount = async function(e, roleKey) {
   }
 
   // Clear password inputs
+  if (curPassEl) curPassEl.value = "";
   if (passEl) passEl.value = "";
   if (confEl) confEl.value = "";
 
@@ -5192,54 +5398,50 @@ window.handleUpdateUserAccount = async function(e, roleKey) {
 
   const passMsg = passwordChanged ? " and password updated" : "";
   if (cloudSuccess) {
-    showToast(`${acc.role} credentials successfully updated in Supabase cloud!`, "success");
-  } else if (cloudReason === 'RLS_BLOCKED') {
-    showToast(`${acc.role} saved locally, but Supabase Cloud blocked the update (Row-Level Security). Run the SQL fix in Supabase to sync across devices.`, "warning", 8000);
+    showToast(`${acc.role} credentials successfully updated and verified in Supabase cloud!`, "success");
   } else {
     showToast(`${acc.role} account credentials saved! Username: "${newUsername}"${passMsg}.`, "success");
   }
 };
 
-// --- Reset Master Settings to Factory Defaults ---
+// --- Reset Master Settings to Factory Defaults (SEC-07: Protected Confirmation) ---
 window.resetMasterSettingsToDefaults = function() {
   const user = (typeof getCurrentUser === "function") ? getCurrentUser() : null;
   if (!user || user.role !== "ADMIN") {
     showToast("Access Denied: Only Administrators can reset Master Settings to defaults.", "error");
     return;
   }
-  if (!confirm("Reset all Master Settings (Machines, Categories, Areas, Responsibilities) to factory defaults? Custom additions will be restored.")) {
-    return;
+  const modal = document.getElementById("confirmResetModal");
+  if (modal) {
+    openConfirmResetModal('RESET_DEFAULTS');
+  } else {
+    localStorage.removeItem("YOKOHAMA_MASTER_MACHINES");
+    localStorage.removeItem("YOKOHAMA_MASTER_AREAS");
+    localStorage.removeItem("YOKOHAMA_MASTER_CATEGORIES");
+    localStorage.removeItem("YOKOHAMA_MASTER_RESPONSIBILITIES");
+    localStorage.removeItem("YOKOHAMA_MASTER_NATURES");
+    localStorage.removeItem("YOKOHAMA_TECHNICIANS");
+
+    YOKOHAMA_MACHINES = JSON.parse(JSON.stringify(INITIAL_MACHINES_BACKUP));
+    YOKOHAMA_AREAS = JSON.parse(JSON.stringify(INITIAL_AREAS_BACKUP));
+    masterCategories = ["NSNL", "IPC", "Printer", "Scanner", "Infra", "MES", "Hardware / PC", "Network / Switch", "PLC / SCADA", "Other"];
+    masterResponsibilities = ["ATC", "MELSS"];
+    masterNatures = [...INITIAL_NATURES_BACKUP];
+    technicians = [...DEFAULT_TECHNICIANS];
+    saveTechsToStorage();
+    initTechniciansDropdown();
+    saveMasterDataToStorage();
+    rebuildMachineMap();
+    initAreasDropdowns();
+    initMachineSelector();
+    initCategoryDropdowns();
+    initResponsibilityDropdown();
+    initNatureSelector();
+    initNatureFilterDropdown();
+    initMachMasterAreaDropdown();
+    renderMasterSettingsUI();
+    showToast("Master Settings restored to factory defaults.", "success");
   }
-  localStorage.removeItem("YOKOHAMA_MASTER_MACHINES");
-  localStorage.removeItem("YOKOHAMA_MASTER_AREAS");
-  localStorage.removeItem("YOKOHAMA_MASTER_CATEGORIES");
-  localStorage.removeItem("YOKOHAMA_MASTER_RESPONSIBILITIES");
-  localStorage.removeItem("YOKOHAMA_MASTER_NATURES");
-  localStorage.removeItem("YOKOHAMA_TECHNICIANS");
-  localStorage.removeItem("YOKOHAMA_USER_ACCOUNTS");
-
-  YOKOHAMA_MACHINES = JSON.parse(JSON.stringify(INITIAL_MACHINES_BACKUP));
-  YOKOHAMA_AREAS = JSON.parse(JSON.stringify(INITIAL_AREAS_BACKUP));
-  masterCategories = ["NSNL", "IPC", "Printer", "Scanner", "Infra", "MES", "Hardware / PC", "Network / Switch", "PLC / SCADA", "Other"];
-  masterResponsibilities = ["ATC", "MELSS"];
-  masterNatures = [...INITIAL_NATURES_BACKUP];
-  technicians = [...DEFAULT_TECHNICIANS];
-  USER_ACCOUNTS = JSON.parse(JSON.stringify(DEFAULT_USER_ACCOUNTS));
-  saveUserAccountsToStorage();
-  saveTechsToStorage();
-  initTechniciansDropdown();
-
-  saveMasterDataToStorage();
-  rebuildMachineMap();
-  initAreasDropdowns();
-  initMachineSelector();
-  initCategoryDropdowns();
-  initResponsibilityDropdown();
-  initNatureSelector();
-  initNatureFilterDropdown();
-  initMachMasterAreaDropdown();
-  renderMasterSettingsUI();
-  showToast("Master Settings reset to factory defaults successfully!", "success");
 };
 
 window.renderMasterSettingsUI = function() {
@@ -5720,7 +5922,8 @@ function initLiveClock() {
   }
 
   updateTime();
-  setInterval(updateTime, 1000);
+  if (window.liveClockTimer) clearInterval(window.liveClockTimer);
+  window.liveClockTimer = setInterval(updateTime, 1000);
 }
 
 // --- Dropdowns & Area/Machine Linking ---
@@ -6344,6 +6547,17 @@ window.selectAllFormAreas = function(selectAll) {
   syncFormHiddenInputs();
 };
 
+function syncAffectedMachinesCount() {
+  const affInput = document.getElementById("affectedMachines");
+  if (affInput && !affInput.dataset.manualOverride) {
+    const count = formSelectedMachines.size > 0 ? formSelectedMachines.size : 1;
+    affInput.value = count;
+    const dtMin = parseInt(document.getElementById("downtimeMinutes")?.value, 10) || 0;
+    const totEl = document.getElementById("totalDowntimeMinutes");
+    if (totEl) totEl.value = dtMin * count;
+  }
+}
+
 window.selectAllFormMachines = function(selectAll) {
   const checkboxes = document.querySelectorAll("#listFormMachineCheckboxes input[type='checkbox']");
   checkboxes.forEach(cb => {
@@ -6360,6 +6574,7 @@ window.selectAllFormMachines = function(selectAll) {
   });
 
   updateFormMachineButtonLabel();
+  syncAffectedMachinesCount();
 
   if (formSelectedMachines.size === 1) {
     const singleCode = Array.from(formSelectedMachines)[0];
@@ -6391,6 +6606,7 @@ window.onFormMachineCheckboxChange = function(inputEl) {
   }
 
   updateFormMachineButtonLabel();
+  syncAffectedMachinesCount();
 
   if (formSelectedMachines.size === 1) {
     const singleCode = Array.from(formSelectedMachines)[0];
@@ -6744,13 +6960,23 @@ function handleFormSubmit(e) {
   }
 
   try {
+    const currentUser = (typeof getCurrentUser === "function") ? getCurrentUser() : null;
+    const currentActor = currentUser ? (currentUser.displayName || currentUser.username) : "Plant Staff";
+    const currentUsername = currentUser ? currentUser.username : "staff";
+    const issueTime = (document.getElementById("issueTime")?.value || "").trim();
+    const closedTime = (document.getElementById("closedTime")?.value || "").trim();
+    const shift = (document.getElementById("shift")?.value || document.getElementById("current-shift-badge")?.textContent || "").trim();
+
     if (editingRecordId) {
       const index = downtimeRecords.findIndex(r => r.id === editingRecordId);
       if (index !== -1) {
-        downtimeRecords[index] = {
+        const updatedRec = {
           ...downtimeRecords[index],
           issueDate,
           date: issueDate,
+          issueTime,
+          closedTime,
+          shift,
           nature,
           area: finalArea,
           process: finalProcess,
@@ -6769,13 +6995,22 @@ function handleFormSubmit(e) {
           responsiblePerson: solvedBy,
           status,
           remarks,
+          updatedBy: currentUsername,
+          actorName: currentActor,
           updatedAt: new Date().toISOString()
         };
+        downtimeRecords[index] = updatedRec;
         showToast(`Record ${editingRecordId} updated successfully!`, "success");
         editingRecordId = null;
+
+        if (typeof window.updateCloudIncident === "function") {
+          window.updateCloudIncident(updatedRec).catch(() => {
+            if (typeof window.queueMutation === "function") window.queueMutation('UPDATE_INCIDENT', updatedRec);
+          });
+        }
       }
     } else {
-      // SINGLE LINE OUTPUT FOR THE ENTIRE BREAKDOWN
+      // SINGLE LINE OUTPUT FOR THE ENTIRE BREAKDOWN (SEC-05: Audit Attributed)
       const year = new Date().getFullYear();
       const recordNum = String(downtimeRecords.length + 1).padStart(3, "0");
       const newId = `YOKO-DT-${year}-${recordNum}`;
@@ -6784,6 +7019,9 @@ function handleFormSubmit(e) {
         id: newId,
         issueDate,
         date: issueDate,
+        issueTime,
+        closedTime,
+        shift,
         nature,
         area: finalArea,
         process: finalProcess,
@@ -6802,11 +7040,21 @@ function handleFormSubmit(e) {
         responsiblePerson: solvedBy,
         status,
         remarks,
-        createdAt: new Date().toISOString()
+        createdBy: currentUsername,
+        createdByName: currentActor,
+        actorName: currentActor,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       };
 
       downtimeRecords.unshift(newRecord);
       showToast(`Downtime entry ${newId} saved as a single line output (${finalMachineNo} • ${finalArea} • ${finalProcess})!`, "success");
+
+      if (typeof window.insertCloudIncident === "function") {
+        window.insertCloudIncident(newRecord).catch(() => {
+          if (typeof window.queueMutation === "function") window.queueMutation('INSERT_INCIDENT', newRecord);
+        });
+      }
     }
 
     saveToStorage();
@@ -7842,11 +8090,30 @@ window.viewRecordDetails = function(id) {
           <span class="text-slate-700">${escapeHtml(rec.remarks || 'None')}</span>
         </div>
       </div>
+
+      <!-- Individual Audit Trail Attribution (SEC-05) -->
+      <div class="p-3 bg-slate-100/70 border border-slate-200 rounded-lg text-xs font-mono space-y-1">
+        <div class="flex items-center justify-between text-slate-600">
+          <span><i class="fa-solid fa-user-pen mr-1 text-slate-400"></i>Created By:</span>
+          <span class="font-bold text-slate-800">${escapeHtml(rec.actorName || rec.createdByName || rec.createdBy || 'Staff')} (${escapeHtml(rec.createdBy || 'staff')})</span>
+        </div>
+        <div class="flex items-center justify-between text-slate-600">
+          <span><i class="fa-regular fa-clock mr-1 text-slate-400"></i>Timestamp:</span>
+          <span class="text-slate-700">${escapeHtml(rec.createdAt ? new Date(rec.createdAt).toLocaleString() : rec.issueDate)}</span>
+        </div>
+        ${rec.updatedBy ? `
+        <div class="flex items-center justify-between text-slate-600 border-t border-slate-200/60 pt-1">
+          <span><i class="fa-solid fa-pen-nib mr-1 text-slate-400"></i>Last Modified By:</span>
+          <span class="font-bold text-indigo-700">${escapeHtml(rec.updatedBy)}</span>
+        </div>
+        ` : ''}
+      </div>
     </div>
   `;
 
   modal.classList.remove("hidden");
 };
+window.openDetailsModal = window.viewRecordDetails;
 
 window.closeDetailsModal = function() {
   const modal = document.getElementById("detailsModal");
@@ -7981,6 +8248,159 @@ function updateMaintenanceLogCount() {
 }
 window.updateMaintenanceLogCount = updateMaintenanceLogCount;
 
+// --- Destructive Actions & Confirmation Modal System (SEC-07: Admin Only + CONFIRM RESET) ---
+let pendingDestructiveAction = null; // 'CLEAR_ALL_LOGS' or 'RESET_DEFAULTS'
+
+window.openConfirmResetModal = function(actionType) {
+  const user = (typeof getCurrentUser === "function") ? getCurrentUser() : null;
+  if (!user || user.role !== "ADMIN") {
+    showToast("Access Denied: Only Administrators can perform destructive reset operations.", "error");
+    return;
+  }
+
+  pendingDestructiveAction = actionType;
+  const modal = document.getElementById("confirmResetModal");
+  const title = document.getElementById("confirmResetTitle");
+  const desc = document.getElementById("confirmResetDescription");
+  const input = document.getElementById("confirmResetInput");
+  const btn = document.getElementById("btnExecuteDestructiveAction");
+  const errorMsg = document.getElementById("confirmResetError");
+
+  if (input) input.value = "";
+  if (btn) btn.disabled = true;
+  if (errorMsg) errorMsg.classList.add("hidden");
+
+  if (actionType === 'CLEAR_ALL_LOGS') {
+    if (title) title.textContent = "Confirm Permanent Purge of Incident Logs";
+    if (desc) desc.textContent = `You are about to permanently purge all ${downtimeRecords.length} incident logs. An automatic JSON backup snapshot will download to your device before deletion.`;
+  } else {
+    if (title) title.textContent = "Confirm Factory Reset of Master Settings";
+    if (desc) desc.textContent = "You are about to restore all machines, areas, categories, and account registries to factory defaults. A settings backup snapshot will download before resetting.";
+  }
+
+  if (modal) {
+    modal.classList.remove("hidden");
+    if (input) input.focus();
+  }
+};
+
+window.closeConfirmResetModal = function() {
+  const modal = document.getElementById("confirmResetModal");
+  if (modal) modal.classList.add("hidden");
+  pendingDestructiveAction = null;
+};
+
+window.handleConfirmResetInputChanged = function() {
+  const input = document.getElementById("confirmResetInput");
+  const btn = document.getElementById("btnExecuteDestructiveAction");
+  const val = (input?.value || "").trim();
+  if (btn) {
+    btn.disabled = (val !== "CONFIRM RESET");
+  }
+};
+
+function downloadSnapshotFile(filename, content, mimeType = "application/json") {
+  try {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 200);
+  } catch (e) {
+    console.warn("Snapshot auto-download fallback:", e);
+  }
+}
+
+window.executeDestructiveActionConfirmed = async function() {
+  const input = document.getElementById("confirmResetInput");
+  const val = (input?.value || "").trim();
+  if (val !== "CONFIRM RESET") {
+    const errorMsg = document.getElementById("confirmResetError");
+    if (errorMsg) errorMsg.classList.remove("hidden");
+    return;
+  }
+
+  const user = getCurrentUser();
+  if (!user || user.role !== "ADMIN") {
+    showToast("Access Denied: Only Administrators can execute reset.", "error");
+    closeConfirmResetModal();
+    return;
+  }
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+
+  if (pendingDestructiveAction === 'CLEAR_ALL_LOGS') {
+    // 1. Automatic JSON Backup Snapshot (SEC-07)
+    const backupData = JSON.stringify({
+      backupDate: new Date().toISOString(),
+      initiatedBy: user.username,
+      totalRecords: downtimeRecords.length,
+      records: downtimeRecords
+    }, null, 2);
+    downloadSnapshotFile(`Yokohama_Incidents_Backup_${timestamp}.json`, backupData);
+
+    // 2. Clear in-memory and storage
+    downtimeRecords = [];
+    window.downtimeRecords = downtimeRecords;
+    saveToStorage();
+
+    // 3. Clear cloud with confirmation phrase
+    if (typeof window.clearAllCloudIncidents === "function") {
+      await window.clearAllCloudIncidents("CONFIRM RESET").catch(e => console.warn(e));
+    }
+
+    renderRecordsTable();
+    renderKPIs();
+    renderCharts();
+    populateDashboardMonths();
+    updateMaintenanceLogCount();
+    showToast("All incident logs emptied. Automatic backup snapshot downloaded.", "success");
+
+  } else if (pendingDestructiveAction === 'RESET_DEFAULTS') {
+    // 1. Master Settings backup snapshot
+    const backupSettings = JSON.stringify({
+      backupDate: new Date().toISOString(),
+      initiatedBy: user.username,
+      machines: YOKOHAMA_MACHINES,
+      areas: YOKOHAMA_AREAS,
+      categories: masterCategories,
+      technicians: technicians
+    }, null, 2);
+    downloadSnapshotFile(`Yokohama_MasterSettings_Backup_${timestamp}.json`, backupSettings);
+
+    // 2. Reset to defaults
+    localStorage.removeItem("YOKOHAMA_MASTER_MACHINES");
+    localStorage.removeItem("YOKOHAMA_MASTER_AREAS");
+    localStorage.removeItem("YOKOHAMA_MASTER_CATEGORIES");
+    localStorage.removeItem("YOKOHAMA_MASTER_RESPONSIBILITIES");
+    localStorage.removeItem("YOKOHAMA_MASTER_NATURES");
+    localStorage.removeItem("YOKOHAMA_TECHNICIANS");
+
+    YOKOHAMA_MACHINES = JSON.parse(JSON.stringify(INITIAL_MACHINES_BACKUP));
+    YOKOHAMA_AREAS = JSON.parse(JSON.stringify(INITIAL_AREAS_BACKUP));
+    masterCategories = ["NSNL", "IPC", "Printer", "Scanner", "Infra", "MES", "Hardware / PC", "Network / Switch", "PLC / SCADA", "Other"];
+    masterResponsibilities = ["ATC", "MELSS"];
+    masterNatures = [...INITIAL_NATURES_BACKUP];
+    technicians = [...DEFAULT_TECHNICIANS];
+    saveTechsToStorage();
+    initTechniciansDropdown();
+    saveMasterDataToStorage();
+    rebuildMachineMap();
+    initAreasDropdowns();
+    initMachineSelector();
+    renderMasterSettingsUI();
+    showToast("Master Settings restored to factory defaults. Backup downloaded.", "success");
+  }
+
+  closeConfirmResetModal();
+};
+
 window.clearAllIncidentLogs = function() {
   const user = (typeof getCurrentUser === "function") ? getCurrentUser() : null;
   if (!user || user.role !== "ADMIN") {
@@ -7991,21 +8411,20 @@ window.clearAllIncidentLogs = function() {
     showToast("Incident logs are already empty.", "info");
     return;
   }
-  const confirmed = (typeof confirm === "function")
-    ? confirm(`DANGER: Are you sure you want to permanently clear all ${downtimeRecords.length} incident logs? This action cannot be undone.`)
-    : true;
-  if (confirmed) {
+  const modal = document.getElementById("confirmResetModal");
+  if (modal) {
+    openConfirmResetModal('CLEAR_ALL_LOGS');
+  } else {
     downtimeRecords = [];
     window.downtimeRecords = downtimeRecords;
     saveToStorage();
     if (typeof window.clearAllCloudIncidents === "function") {
-      window.clearAllCloudIncidents().catch(e => console.warn("[Supabase] Cloud clear warning:", e));
+      window.clearAllCloudIncidents("CONFIRM RESET").catch(e => console.warn(e));
     }
     renderRecordsTable();
     renderKPIs();
     renderCharts();
     populateDashboardMonths();
-    initCategoryFilterDropdown();
     updateMaintenanceLogCount();
     showToast("All incident logs have been emptied successfully.", "success");
   }
@@ -10406,17 +10825,48 @@ window.setExportModalMode = function(mode) {
   const btnCustom = document.getElementById("btnExportModeCustom");
   const secMonth = document.getElementById("exportModalMonthSection");
   const secCustom = document.getElementById("exportModalCustomSection");
+  const selectMonth = document.getElementById("exportModalMonthSelect");
+  const inputStart = document.getElementById("exportModalStartDate");
+  const inputEnd = document.getElementById("exportModalEndDate");
 
   if (mode === "month") {
-    if (btnMonth) btnMonth.className = "py-2.5 px-3 rounded-xl text-xs font-black bg-slate-900 text-white border border-slate-900 transition-all flex items-center justify-center gap-2 shadow-xs";
-    if (btnCustom) btnCustom.className = "py-2.5 px-3 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 transition-all flex items-center justify-center gap-2";
+    if (btnMonth) btnMonth.className = "py-2.5 px-3 rounded-xl text-xs font-black bg-slate-900 text-white border border-slate-900 transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer";
+    if (btnCustom) btnCustom.className = "py-2.5 px-3 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 transition-all flex items-center justify-center gap-2 cursor-pointer";
     if (secMonth) secMonth.classList.remove("hidden");
     if (secCustom) secCustom.classList.add("hidden");
+
+    if (selectMonth) {
+      selectMonth.disabled = false;
+      selectMonth.setAttribute("required", "required");
+    }
+    if (inputStart) {
+      inputStart.disabled = true;
+      inputStart.removeAttribute("required");
+      inputStart.value = "";
+    }
+    if (inputEnd) {
+      inputEnd.disabled = true;
+      inputEnd.removeAttribute("required");
+      inputEnd.value = "";
+    }
   } else {
-    if (btnCustom) btnCustom.className = "py-2.5 px-3 rounded-xl text-xs font-black bg-slate-900 text-white border border-slate-900 transition-all flex items-center justify-center gap-2 shadow-xs";
-    if (btnMonth) btnMonth.className = "py-2.5 px-3 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 transition-all flex items-center justify-center gap-2";
+    if (btnCustom) btnCustom.className = "py-2.5 px-3 rounded-xl text-xs font-black bg-slate-900 text-white border border-slate-900 transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer";
+    if (btnMonth) btnMonth.className = "py-2.5 px-3 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 transition-all flex items-center justify-center gap-2 cursor-pointer";
     if (secMonth) secMonth.classList.add("hidden");
     if (secCustom) secCustom.classList.remove("hidden");
+
+    if (selectMonth) {
+      selectMonth.disabled = true;
+      selectMonth.removeAttribute("required");
+    }
+    if (inputStart) {
+      inputStart.disabled = false;
+      inputStart.setAttribute("required", "required");
+    }
+    if (inputEnd) {
+      inputEnd.disabled = false;
+      inputEnd.setAttribute("required", "required");
+    }
   }
   updateExportModalPreview();
 };
@@ -10547,15 +10997,40 @@ window.handleDowntimeFileDrop = function(e) {
   document.getElementById("dropZoneDowntimeExcel")?.classList.remove("border-violet-500", "bg-violet-50");
   const files = e.dataTransfer?.files;
   if (files && files.length > 0) {
-    parseDowntimeExcelFile(files[0]);
+    const file = files[0];
+    const maxSizeBytes = 10 * 1024 * 1024; // 10MB Limit (SEC-06)
+    if (file.size > maxSizeBytes) {
+      showToast(`File size (${(file.size / (1024 * 1024)).toFixed(1)} MB) exceeds the maximum allowed limit of 10 MB.`, "error");
+      return;
+    }
+    const ext = (file.name || "").split('.').pop().toLowerCase();
+    if (!['xlsx', 'xls', 'csv'].includes(ext)) {
+      showToast("Invalid file format. Only Excel (.xlsx, .xls) and CSV are accepted.", "warning");
+      return;
+    }
+    parseDowntimeExcelFile(file);
   }
 };
 
 window.handleDowntimeFileSelect = function(e) {
   const file = e.target.files && e.target.files[0];
-  if (file) {
-    parseDowntimeExcelFile(file);
+  if (!file) return;
+
+  const maxSizeBytes = 10 * 1024 * 1024; // 10MB Limit (SEC-06)
+  if (file.size > maxSizeBytes) {
+    showToast(`File size (${(file.size / (1024 * 1024)).toFixed(1)} MB) exceeds the maximum allowed limit of 10 MB.`, "error");
+    e.target.value = "";
+    return;
   }
+
+  const ext = (file.name || "").split('.').pop().toLowerCase();
+  if (!['xlsx', 'xls', 'csv'].includes(ext)) {
+    showToast("Invalid file format. Only Excel (.xlsx, .xls) and CSV are accepted.", "warning");
+    e.target.value = "";
+    return;
+  }
+
+  parseDowntimeExcelFile(file);
 };
 
 window.quickLoadPreloadedDowntimeFile = function() {

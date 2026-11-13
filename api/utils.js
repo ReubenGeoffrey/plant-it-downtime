@@ -111,6 +111,9 @@ function mapRowToRecord(row) {
     id: String(row.id),
     date: recDate,
     issueDate: recDate,
+    issueTime: row.issue_time || '',
+    closedTime: row.closed_time || '',
+    shift: row.shift || 'Shift A',
     nature: row.nature || 'MES',
     area: row.area || 'Plant-1',
     process: row.process || 'General',
@@ -129,6 +132,10 @@ function mapRowToRecord(row) {
     responsiblePerson: resp,
     status: row.status || 'Open',
     remarks: row.remarks || '',
+    createdBy: row.created_by || 'System',
+    createdByName: row.created_by_name || row.created_by || 'System',
+    updatedBy: row.updated_by || 'System',
+    actorName: row.actor_name || row.updated_by || 'System',
     createdAt: row.created_at || new Date().toISOString(),
     updatedAt: row.updated_at || new Date().toISOString()
   };
@@ -148,6 +155,9 @@ function mapRecordToRow(record) {
   return {
     id: String(record.id),
     date: recDate,
+    issue_time: record.issueTime || '',
+    closed_time: record.closedTime || '',
+    shift: record.shift || 'Shift A',
     nature: record.nature || 'MES',
     area: record.area || 'Plant-1',
     process: record.process || 'General',
@@ -164,6 +174,10 @@ function mapRecordToRow(record) {
     responsible_person: resp,
     status: record.status || 'Open',
     remarks: record.remarks || '',
+    created_by: record.createdBy || 'System',
+    created_by_name: record.createdByName || record.createdBy || 'System',
+    updated_by: record.updatedBy || 'System',
+    actor_name: record.actorName || record.updatedBy || 'System',
     updated_at: new Date().toISOString()
   };
 }
@@ -192,7 +206,7 @@ function escapeHtml(str) {
 }
 
 // ----------------------------------------------------------------------------
-// Authoritative Availability Calculation
+// Authoritative Availability Calculation (MATH-01: Zero Downtime = 100.0%)
 // ----------------------------------------------------------------------------
 function calculateAuthoritativeAvailability(operatingMinutes, downtimeMinutes, hasOperatingData) {
   if (!hasOperatingData || !operatingMinutes || operatingMinutes <= 0) {
@@ -206,10 +220,7 @@ function calculateAuthoritativeAvailability(operatingMinutes, downtimeMinutes, h
   const dt = Math.max(0, Number(downtimeMinutes) || 0);
   const op = Math.max(0, Number(operatingMinutes) || 0);
 
-  if (op === 0) {
-    return { availabilityPct: null, display: 'N/A', status: 'No Data' };
-  }
-
+  // MATH-01: When downtime is zero with operating data, availability is 100.0% Optimal
   if (dt === 0) {
     return { availabilityPct: 100.00, display: '100.00%', status: 'Optimal' };
   }

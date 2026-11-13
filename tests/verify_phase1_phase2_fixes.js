@@ -37,11 +37,11 @@ const indexHtml = fs.readFileSync(indexHtmlPath, "utf8");
 // Test 1: Canonical Application Title & Clean Single Attribution
 test("Canonical Portal Title & Clean Attribution in Footer", () => {
   assert(indexHtml.includes("<title>Plant IT Downtime Management Portal</title>"), "Title must be 'Plant IT Downtime Management Portal'");
-  assert(indexHtml.includes("Build by <span class=\"text-white font-extrabold tracking-normal\">Hadssha Bell S</span> &amp; <span class=\"text-white font-extrabold tracking-normal\">Reuben Geoffrey</span>"), "Attribution must exist in footer glassy pill");
+  assert(indexHtml.includes("Built by <span class=\"text-white font-extrabold tracking-normal\">Hadssha Bell S</span> &amp; <span class=\"text-white font-extrabold tracking-normal\">Reuben Geoffrey</span>") || indexHtml.includes("Build by <span class=\"text-white font-extrabold tracking-normal\">Hadssha Bell S</span> &amp; <span class=\"text-white font-extrabold tracking-normal\">Reuben Geoffrey</span>"), "Attribution must exist in footer glassy pill");
   
   // Header should not duplicate attribution
   const headerSection = indexHtml.substring(0, 1000);
-  assert(!headerSection.includes("Build by Hadssha Bell S"), "Attribution must not be duplicated in header");
+  assert(!headerSection.includes("Build by Hadssha Bell S") && !headerSection.includes("Built by Hadssha Bell S"), "Attribution must not be duplicated in header");
   
   // Tab 1 must be 'Downtime Entry'
   assert(indexHtml.includes("Downtime Entry"), "Tab 1 must be named 'Downtime Entry'");
