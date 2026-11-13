@@ -18,7 +18,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
   <!-- Three.js for 3D Visualizer Studio (Local with CDN fallback) -->
-  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   
   <!-- ExcelJS & FileSaver for Rich Premium Styled Excel Export (Local with CDN fallback) -->
   <script src="exceljs.min.js"></script>
@@ -33,7 +33,7 @@
   </script>
   
   <!-- SheetJS for Fallback -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   
   <!-- Supabase Cloud SDK v2 & Data Layer (Local with CDN fallback) -->
   <script src="supabase.min.js"></script>
@@ -1741,6 +1741,20 @@
             <!-- Dynamically populated by renderRecordsTable() in app.js -->
           </tbody>
         </table>
+      </div>
+
+      <!-- Table Pagination Bar (BUG-13 & Task 4: 50 rows per page with Next/Prev) -->
+      <div id="recordsTablePagination" class="flex flex-col sm:flex-row items-center justify-between px-4 py-3 bg-white border border-t-0 border-slate-200 rounded-b-xl text-xs gap-2">
+        <div class="text-slate-500 font-medium" id="tablePaginationText">Showing 0 entries</div>
+        <div class="flex items-center gap-2" id="tablePaginationButtons">
+          <button type="button" id="btnTablePrev" onclick="setTablePage(tableCurrentPage - 1)" class="px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50 font-bold text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" disabled>
+            <i class="fa-solid fa-chevron-left mr-1 text-[10px]"></i> Previous
+          </button>
+          <span id="tablePageIndicator" class="px-2.5 py-1 rounded bg-slate-100 font-mono font-bold text-slate-800">Page 1 of 1</span>
+          <button type="button" id="btnTableNext" onclick="setTablePage(tableCurrentPage + 1)" class="px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50 font-bold text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" disabled>
+            Next <i class="fa-solid fa-chevron-right ml-1 text-[10px]"></i>
+          </button>
+        </div>
       </div>
 
     </section>

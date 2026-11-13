@@ -69,19 +69,24 @@ module.exports = async function handler(req, res) {
     }
 
     const standardAreasCount = 8;
-    const totalOperatingMinutes = periodDays * 24 * 60 * standardAreasCount;
-    const totalWallClockDowntimeMinutes = records.reduce((acc, r) => acc + (parseInt(r.downtimeMinutes, 10) || 0), 0);
-    const totalEquipmentDowntimeMinutes = records.reduce((acc, r) => {
+    const effectiveAreasCount = (area && area !== 'ALL') ? 1 : standardAreasCount;
+    const totalOperatingMinutes = periodDays * 24 * 60 * effectiveAreasCount;
+    const totalOutageMinutes = records.reduce((acc, r) => acc + (parseInt(r.downtimeMinutes, 10) || 0), 0);
+    const totalMachineImpactMinutes = records.reduce((acc, r) => {
+      const explicitTotal = parseInt(r.totalDowntimeMinutes, 10);
+      if (!isNaN(explicitTotal) && explicitTotal > 0) return acc + explicitTotal;
       const dt = parseInt(r.downtimeMinutes, 10) || 0;
       const aff = parseInt(r.affectedMachines, 10) || 1;
       return acc + (dt * aff);
     }, 0);
-    const totalDowntimeMinutes = totalWallClockDowntimeMinutes;
+    const totalWallClockDowntimeMinutes = totalOutageMinutes;
+    const totalEquipmentDowntimeMinutes = totalMachineImpactMinutes;
+    const totalDowntimeMinutes = totalOutageMinutes;
 
     const hasOperatingData = hasRecords || (periodDays > 0);
 
     // Authoritative calculations
-    const availability = calculateAuthoritativeAvailability(totalOperatingMinutes, totalWallClockDowntimeMinutes, hasOperatingData);
+    const availability = calculateAuthoritativeAvailability(totalOperatingMinutes, totalOutageMinutes, hasOperatingData);
     const closure = calculateAuthoritativeClosureRate(records);
     const mttr = calculateAuthoritativeMTTR(records);
 
@@ -97,12 +102,15 @@ module.exports = async function handler(req, res) {
 
     return res.status(200).json({
       periodDays,
+      effectiveAreasCount,
       totalOperatingMinutes,
       totalDowntimeMinutes,
+      totalOutageMinutes,
+      totalMachineImpactMinutes,
       totalWallClockDowntimeMinutes,
       totalEquipmentDowntimeMinutes,
-      totalDowntimeHours: parseFloat((totalWallClockDowntimeMinutes / 60).toFixed(1)),
-      totalEquipmentDowntimeHours: parseFloat((totalEquipmentDowntimeMinutes / 60).toFixed(1)),
+      totalDowntimeHours: parseFloat((totalOutageMinutes / 60).toFixed(1)),
+      totalEquipmentDowntimeHours: parseFloat((totalMachineImpactMinutes / 60).toFixed(1)),
       totalIncidents: records.length,
       openCount,
       completedCount,

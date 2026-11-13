@@ -1190,6 +1190,36 @@
   let mouseX = 0, mouseY = 0;
   let isDragging3D = false;
   let previousMouseX = 0, previousMouseY = 0;
+  let is3DListenersAttached = false;
+
+  function disposeThreeJS() {
+    if (threeAnimFrame) {
+      cancelAnimationFrame(threeAnimFrame);
+      threeAnimFrame = null;
+    }
+    if (threeScene) {
+      threeScene.traverse((obj) => {
+        if (obj.geometry) {
+          try { obj.geometry.dispose(); } catch (e) {}
+        }
+        if (obj.material) {
+          if (Array.isArray(obj.material)) {
+            obj.material.forEach(m => { try { m.dispose(); } catch (e) {} });
+          } else {
+            try { obj.material.dispose(); } catch (e) {}
+          }
+        }
+      });
+    }
+    if (threeRenderer) {
+      try { threeRenderer.dispose(); } catch (e) {}
+      threeRenderer = null;
+    }
+    threeScene = null;
+    threeCamera = null;
+    threePillars = [];
+  }
+  window.disposeThreeJS = disposeThreeJS;
 
   function setVisualizerMode(mode) {
     window.obsVisualizerMode = mode;
@@ -1213,7 +1243,7 @@
       btn2d?.classList.remove("text-slate-600");
       btn3d?.classList.remove("bg-white", "text-slate-900", "shadow-xs");
       btn3d?.classList.add("text-slate-600");
-      if (threeAnimFrame) cancelAnimationFrame(threeAnimFrame);
+      disposeThreeJS();
     }
     syncURLState();
   }
@@ -1275,35 +1305,54 @@
     updateThreePillars();
 
     // Mouse Interaction for Drag Orbit
-    canvas.addEventListener("mousedown", (e) => {
-      isDragging3D = true;
-      previousMouseX = e.clientX;
-      previousMouseY = e.clientY;
-    });
-
-    window.addEventListener("mouseup", () => {
-      isDragging3D = false;
-    });
-
-    canvas.addEventListener("mousemove", (e) => {
-      if (isDragging3D && threeCamera) {
-        const deltaX = e.clientX - previousMouseX;
-        const deltaY = e.clientY - previousMouseY;
-        threeCamera.position.x += deltaX * 0.05;
-        threeCamera.position.y = Math.max(5, Math.min(30, threeCamera.position.y - deltaY * 0.05));
-        threeCamera.lookAt(0, 2, 0);
+    if (!canvas._has3DListeners) {
+      canvas.addEventListener("mousedown", (e) => {
+        isDragging3D = true;
         previousMouseX = e.clientX;
         previousMouseY = e.clientY;
-      }
-    });
+      });
 
-    canvas.addEventListener("wheel", (e) => {
-      e.preventDefault();
-      if (threeCamera) {
-        threeCamera.position.z = Math.max(15, Math.min(50, threeCamera.position.z + e.deltaY * 0.03));
-        threeCamera.lookAt(0, 2, 0);
-      }
-    }, { passive: false });
+      canvas.addEventListener("mousemove", (e) => {
+        if (isDragging3D && threeCamera) {
+          const deltaX = e.clientX - previousMouseX;
+          const deltaY = e.clientY - previousMouseY;
+          threeCamera.position.x += deltaX * 0.05;
+          threeCamera.position.y = Math.max(5, Math.min(30, threeCamera.position.y - deltaY * 0.05));
+          threeCamera.lookAt(0, 2, 0);
+          previousMouseX = e.clientX;
+          previousMouseY = e.clientY;
+        }
+      });
+
+      canvas.addEventListener("wheel", (e) => {
+        e.preventDefault();
+        if (threeCamera) {
+          threeCamera.position.z = Math.max(15, Math.min(50, threeCamera.position.z + e.deltaY * 0.03));
+          threeCamera.lookAt(0, 2, 0);
+        }
+      }, { passive: false });
+
+      canvas._has3DListeners = true;
+    }
+
+    if (!is3DListenersAttached) {
+      window.addEventListener("mouseup", () => {
+        isDragging3D = false;
+      });
+      window.addEventListener("resize", () => {
+        if (threeRenderer && threeCamera) {
+          const cont = canvas.parentElement;
+          if (cont) {
+            const nw = cont.clientWidth || 800;
+            const nh = cont.clientHeight || 440;
+            threeCamera.aspect = nw / nh;
+            threeCamera.updateProjectionMatrix();
+            threeRenderer.setSize(nw, nh);
+          }
+        }
+      });
+      is3DListenersAttached = true;
+    }
 
     // Animation Loop
     function animate() {

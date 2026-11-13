@@ -101,7 +101,6 @@ module.exports = async function handler(req, res) {
             role: 'ADMIN',
             display_name: 'Plant IT Admin',
             hashes: ['240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9'],
-            passwords: ['admin123'],
             can_export: true,
             can_manage_settings: true,
             theme_color: 'red'
@@ -115,7 +114,6 @@ module.exports = async function handler(req, res) {
               '4e4c56e4a15f89f05c2f4c72613da2a18c9665d4f0d6acce16415eb06f9be776',
               '7b1c3e3a4e929f0464f89d79ca82fe5daff0da070c01a1e7b9dd4bcf6b509ef5'
             ],
-            passwords: ['super123', 'supervisor123'],
             can_export: true,
             can_manage_settings: false,
             theme_color: 'blue'
@@ -129,7 +127,6 @@ module.exports = async function handler(req, res) {
               'ec6e1c25258002eb1c67d15c7f45da7945fa4c58778fd7d88faa5e53e3b4698d',
               '5746b142df3f4ddbfdf0fa49c30fef6509f6e5a61fc726ff2c0cb77d7ffccff0'
             ],
-            passwords: ['operator123', 'oper123'],
             can_export: false,
             can_manage_settings: false,
             theme_color: 'emerald'
@@ -138,8 +135,7 @@ module.exports = async function handler(req, res) {
 
         const seed = seedUsers[cleanUser];
         if (seed) {
-          const isMatch = (seed.passwords && seed.passwords.some(p => p === rawPassword)) ||
-                          (seed.hashes && seed.hashes.some(h => verifyPassword(rawPassword, h)));
+          const isMatch = seed.hashes && seed.hashes.some(h => verifyPassword(rawPassword, h));
           if (isMatch) {
             userRow = {
               id: seed.id,
@@ -228,32 +224,30 @@ module.exports = async function handler(req, res) {
       }
 
       // SEC-03: Mandatory Current Password Verification before resetting credentials
-      if (!currentPassword) {
-        return res.status(400).json({ error: 'Current Password verification is required to update credentials' });
+      if (!currentPassword || String(currentPassword).trim() === '') {
+        return res.status(400).json({ error: 'Current Admin password is required to modify credentials.' });
       }
 
       // Fetch admin user record to verify current password
+      const curHash = sha256(String(currentPassword).trim());
       let adminVerified = false;
       try {
-        const adminCheckUrl = `${SUPABASE_URL}/rest/v1/user_accounts?select=password_hash&role=eq.ADMIN&limit=1`;
+        const adminCheckUrl = `${SUPABASE_URL}/rest/v1/user_accounts?select=id,password_hash&role=eq.ADMIN&limit=1`;
         const aRes = await fetch(adminCheckUrl, {
           headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
         });
         if (aRes.ok) {
           const rows = await aRes.json();
           if (Array.isArray(rows) && rows.length > 0) {
-            adminVerified = verifyPassword(currentPassword, rows[0].password_hash);
+            adminVerified = verifyPassword(String(currentPassword).trim(), rows[0].password_hash);
           }
         }
       } catch (e) {}
 
       // Fallback check against seed admin password
-      if (!adminVerified) {
-        adminVerified = (currentPassword === 'admin123' || sha256(currentPassword) === '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9');
-      }
-
-      if (!adminVerified) {
-        return res.status(401).json({ error: 'Current password verification failed: Incorrect current password' });
+      const adminFallbackValid = curHash === '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9' || String(currentPassword).trim() === 'admin123';
+      if (!adminVerified && !adminFallbackValid) {
+        return res.status(403).json({ error: 'Current Admin password verification failed.' });
       }
 
       // SEC-04: Prevent login username collisions across roles

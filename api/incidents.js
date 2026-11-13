@@ -42,7 +42,7 @@ module.exports = async function handler(req, res) {
       const rows = await sRes.json();
       const records = (Array.isArray(rows) ? rows : []).map(mapRowToRecord);
 
-      return res.status(200).json({ count: records.length, data: records });
+      return res.status(200).json({ count: records.length, data: records, records });
     } catch (err) {
       return res.status(500).json({ error: 'Database fetch failed', message: err.message });
     }
