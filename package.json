@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "description": "Yokohama MES Downtime & Availability Tracker Desktop Application",
   "scripts": {
-    "start": "python -m http.server 8080",
+    "start": "node server.js",
+    "start:python": "python -m http.server 8080",
     "bundle": "python update_app_js.py",
     "test": "node tests/run_tests.js",
     "test:acceptance": "node tests/run_acceptance_tests.js",
