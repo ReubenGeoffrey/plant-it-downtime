@@ -1029,6 +1029,19 @@ function initAuthSystem() {
           }
         }
 
+        // 2b. Firebase Firestore & Auth Check (Google AI Studio / Firebase Deployments)
+        if (!matchedUser && typeof window.isFirebaseActive === "function" && window.isFirebaseActive() && typeof window.authenticateUserWithFirebase === "function") {
+          try {
+            const fbRes = await window.authenticateUserWithFirebase(usernameInput, passwordInput);
+            if (fbRes && fbRes.connected && fbRes.user) {
+              matchedUser = fbRes.user;
+              cloudConnected = true;
+            }
+          } catch (fbErr) {
+            console.warn("[Firebase] Auth check notice:", fbErr);
+          }
+        }
+
         // 3. Offline Standalone Fallback: Compares cryptographic SHA-256 hashes only (zero plain passwords)
         if (!matchedUser) {
           const pHash = await hashCredential(passwordInput);
@@ -2668,6 +2681,42 @@ async function initStorage() {
     }
   }
 
+  // --- Live Firebase Firestore Cloud Database Sync (Google AI Studio) ---
+  if (typeof window.isFirebaseActive === "function" && window.isFirebaseActive()) {
+    try {
+      if (typeof window.fetchFirebaseIncidents === "function") {
+        const fbData = await window.fetchFirebaseIncidents();
+        if (Array.isArray(fbData) && fbData.length > 0) {
+          console.log(`[Firebase] Synced ${fbData.length} live records from Firestore database!`);
+          downtimeRecords = fbData;
+          window.downtimeRecords = downtimeRecords;
+          localStorage.setItem("YOKOHAMA_DOWNTIME_RECORDS", JSON.stringify(downtimeRecords));
+          if (typeof renderKPIs === "function") renderKPIs();
+          if (typeof renderCharts === "function") renderCharts();
+          if (typeof renderRecordsTable === "function") renderRecordsTable();
+        } else if (downtimeRecords.length > 0 && typeof window.bulkUpsertFirebaseIncidents === "function") {
+          console.log("[Firebase] Firestore empty, seeding local records to Firestore...");
+          window.bulkUpsertFirebaseIncidents(downtimeRecords).catch(e => console.warn(e));
+        }
+      }
+
+      if (typeof window.listenToFirebaseIncidents === "function") {
+        window.listenToFirebaseIncidents((liveRecords) => {
+          if (Array.isArray(liveRecords) && liveRecords.length > 0) {
+            downtimeRecords = liveRecords;
+            window.downtimeRecords = downtimeRecords;
+            localStorage.setItem("YOKOHAMA_DOWNTIME_RECORDS", JSON.stringify(downtimeRecords));
+            if (typeof renderKPIs === "function") renderKPIs();
+            if (typeof renderCharts === "function") renderCharts();
+            if (typeof renderRecordsTable === "function") renderRecordsTable();
+          }
+        });
+      }
+    } catch (fbErr) {
+      console.warn("[Firebase] Storage init notice:", fbErr);
+    }
+  }
+
   // --- Live Supabase Cloud Database Sync ---
   if (typeof window.fetchCloudIncidents === "function") {
     try {
@@ -2729,7 +2778,9 @@ window.initStorage = initStorage;
 
 function saveToStorage() {
   localStorage.setItem("YOKOHAMA_DOWNTIME_RECORDS", JSON.stringify(downtimeRecords));
-  if (typeof window.bulkUpsertCloudIncidents === "function" && Array.isArray(downtimeRecords) && downtimeRecords.length > 0) {
+  if (typeof window.isFirebaseActive === "function" && window.isFirebaseActive() && typeof window.bulkUpsertFirebaseIncidents === "function") {
+    window.bulkUpsertFirebaseIncidents(downtimeRecords).catch(e => console.warn("[Firebase] Sync notice:", e));
+  } else if (typeof window.bulkUpsertCloudIncidents === "function" && Array.isArray(downtimeRecords) && downtimeRecords.length > 0) {
     window.bulkUpsertCloudIncidents(downtimeRecords).catch(e => console.warn("[Supabase] Cloud sync warning:", e));
   }
 }
@@ -2767,6 +2818,24 @@ window.triggerManualCloudSync = async function() {
         }
       } catch (e) {
         console.warn("[Cloud Sync] Accounts fetch warning:", e);
+      }
+    }
+
+    // 1b. Fetch live incidents from Firebase Firestore (if active)
+    if (typeof window.isFirebaseActive === "function" && window.isFirebaseActive() && typeof window.fetchFirebaseIncidents === "function") {
+      try {
+        const fbData = await window.fetchFirebaseIncidents();
+        if (Array.isArray(fbData) && fbData.length > 0) {
+          downtimeRecords = fbData;
+          window.downtimeRecords = downtimeRecords;
+          localStorage.setItem("YOKOHAMA_DOWNTIME_RECORDS", JSON.stringify(downtimeRecords));
+          syncedCount = fbData.length;
+        } else if (downtimeRecords.length > 0 && typeof window.bulkUpsertFirebaseIncidents === "function") {
+          await window.bulkUpsertFirebaseIncidents(downtimeRecords);
+          syncedCount = downtimeRecords.length;
+        }
+      } catch (fbErr) {
+        console.warn("[Firebase] Cloud sync notice:", fbErr);
       }
     }
 
