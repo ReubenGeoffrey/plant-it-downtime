@@ -240,7 +240,8 @@ async function fetchCloudIncidents() {
       });
       if (res.ok) {
         const data = await res.json();
-        return Array.isArray(data.data) ? data.data : [];
+        const list = Array.isArray(data.data) ? data.data : (Array.isArray(data.records) ? data.records : []);
+        return list.filter(r => r && r.id !== 'SYS_CONFIG_MASTER_DATA');
       }
     } catch (e) {
       // Offline fallback
@@ -249,7 +250,7 @@ async function fetchCloudIncidents() {
 
   // Fallback for desktop mode
   try {
-    const res = await fetch(`${REST_BASE}/incidents?select=*&order=date.desc`, {
+    const res = await fetch(`${REST_BASE}/incidents?select=*&id=neq.SYS_CONFIG_MASTER_DATA&order=date.desc`, {
       method: 'GET',
       headers: {
         'apikey': SUPABASE_ANON_KEY,
@@ -258,7 +259,9 @@ async function fetchCloudIncidents() {
     });
     if (res.ok) {
       const data = await res.json();
-      return (data || []).map(mapRowToRecord);
+      return (data || [])
+        .filter(r => r && r.id !== 'SYS_CONFIG_MASTER_DATA')
+        .map(mapRowToRecord);
     }
   } catch (err) {
     console.warn('[Data] Cloud fetch failed:', err);
@@ -358,7 +361,7 @@ window.bulkUpsertCloudIncidents = bulkUpsertCloudIncidents;
 // 5. Delete incident from Cloud (Admin Only)
 // ----------------------------------------------------------------------------
 async function deleteCloudIncident(id) {
-  if (!id) return false;
+  if (!id || id === 'SYS_CONFIG_MASTER_DATA') return false;
   const token = getSessionToken();
   const env = getRuntimeEnvironment();
 
@@ -416,7 +419,7 @@ async function clearAllCloudIncidents(confirmPhrase = '') {
   }
 
   try {
-    const res = await fetch(`${REST_BASE}/incidents?id=neq.___NEVER___`, {
+    const res = await fetch(`${REST_BASE}/incidents?id=neq.SYS_CONFIG_MASTER_DATA`, {
       method: 'DELETE',
       headers: {
         'apikey': SUPABASE_ANON_KEY,
@@ -429,6 +432,108 @@ async function clearAllCloudIncidents(confirmPhrase = '') {
   }
 }
 window.clearAllCloudIncidents = clearAllCloudIncidents;
+
+// ----------------------------------------------------------------------------
+// 6b. Supabase Master Data Bidirectional Synchronization
+// ----------------------------------------------------------------------------
+async function fetchCloudMasterData() {
+  const token = getSessionToken();
+  const env = getRuntimeEnvironment();
+
+  if (token && env.isOnline) {
+    try {
+      const res = await fetch('/api/master-data', {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && typeof data === 'object' && (data.areas || data.machines || data.categories)) {
+          return data;
+        }
+      }
+    } catch (e) {}
+  }
+
+  // Fallback: Direct PostgREST query to Supabase SYS_CONFIG_MASTER_DATA row
+  try {
+    const res = await fetch(`${REST_BASE}/incidents?id=eq.SYS_CONFIG_MASTER_DATA&select=issue_details`, {
+      method: 'GET',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+      }
+    });
+    if (res.ok) {
+      const list = await res.json();
+      if (Array.isArray(list) && list.length > 0 && list[0].issue_details) {
+        return JSON.parse(list[0].issue_details);
+      }
+    }
+  } catch (err) {
+    console.warn('[MasterData] Cloud fetch failed:', err);
+  }
+
+  return null;
+}
+window.fetchCloudMasterData = fetchCloudMasterData;
+
+async function saveCloudMasterData(masterConfig) {
+  if (!masterConfig || typeof masterConfig !== 'object') return false;
+  const token = getSessionToken();
+  const env = getRuntimeEnvironment();
+
+  if (token && env.isOnline) {
+    try {
+      const res = await fetch('/api/master-data', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(masterConfig)
+      });
+      if (res.ok) return true;
+    } catch (e) {}
+  }
+
+  // Fallback: Direct PostgREST upsert to Supabase
+  try {
+    const payload = {
+      id: 'SYS_CONFIG_MASTER_DATA',
+      date: new Date().toISOString().split('T')[0],
+      nature: 'SYSTEM',
+      area: 'SYSTEM',
+      process: 'SYSTEM_CONFIG',
+      machine_no: 'SYS_MASTER',
+      is_critical: 'No',
+      downtime_minutes: 0,
+      affected_machines: 1,
+      total_downtime_minutes: 0,
+      category: 'System',
+      issue_details: JSON.stringify(masterConfig),
+      action_plan: 'Automatic Cloud Synchronization of Plant Master Registry',
+      responsibility: 'ATC',
+      responsible_person: 'System Administrator',
+      status: 'Completed'
+    };
+    const res = await fetch(`${REST_BASE}/incidents`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify(payload)
+    });
+    return res.ok;
+  } catch (err) {
+    console.warn('[MasterData] Cloud save failed:', err);
+    return false;
+  }
+}
+window.saveCloudMasterData = saveCloudMasterData;
 
 // ----------------------------------------------------------------------------
 // 7. Update User Account Credentials (Admin Only with Current Password Check)

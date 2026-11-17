@@ -643,33 +643,36 @@ async function fetchAuthenticatedCloudData(user) {
 
   if (env.isOnline && token) {
     try {
-      // 1. Fetch Master Data (only populate if local storage has no custom version)
+      // 1. Fetch Master Data from Cloud (preserves local custom master version while syncing)
       const hasLocalMaster = localStorage.getItem("YOKOHAMA_MASTER_VERSION") === "2026_master_v2";
-      if (!hasLocalMaster) {
-        const mRes = await fetch("/api/master-data", {
-          headers: { "Authorization": `Bearer ${token}` }
-        });
-        if (mRes.ok) {
-          const mData = await mRes.json();
-          if (mData) {
-            if (Array.isArray(mData.areas) && mData.areas.length > 0) YOKOHAMA_AREAS = mData.areas;
-            if (Array.isArray(mData.categories) && mData.categories.length > 0) masterCategories = mData.categories;
-            if (Array.isArray(mData.natures) && mData.natures.length > 0) masterNatures = mData.natures;
-            if (Array.isArray(mData.responsibilities) && mData.responsibilities.length > 0) masterResponsibilities = mData.responsibilities;
-            if (Array.isArray(mData.technicians) && mData.technicians.length > 0) technicians = mData.technicians;
-            
-            if (typeof window.syncAllMasterDataUI === "function") {
-              window.syncAllMasterDataUI();
-            } else {
-              initAreasDropdowns();
-              initCategoryDropdowns();
-              initNatureSelector();
-              initNatureFilterDropdown();
-              initResponsibilityDropdown();
-              initTechniciansDropdown();
-            }
+      try {
+        const mData = typeof window.fetchCloudMasterData === "function" ? await window.fetchCloudMasterData() : null;
+        if (mData && typeof mData === "object" && (mData.machines || mData.areas || mData.categories)) {
+          if (Array.isArray(mData.machines) && mData.machines.length > 0) YOKOHAMA_MACHINES = mData.machines;
+          if (Array.isArray(mData.areas) && mData.areas.length > 0) YOKOHAMA_AREAS = mData.areas;
+          if (Array.isArray(mData.processes) && mData.processes.length > 0) YOKOHAMA_PROCESSES = mData.processes;
+          if (Array.isArray(mData.categories) && mData.categories.length > 0) masterCategories = mData.categories;
+          if (Array.isArray(mData.natures) && mData.natures.length > 0) masterNatures = mData.natures;
+          if (Array.isArray(mData.responsibilities) && mData.responsibilities.length > 0) masterResponsibilities = mData.responsibilities;
+          if (Array.isArray(mData.technicians) && mData.technicians.length > 0) technicians = mData.technicians;
+          
+          if (typeof window.syncAllMasterDataUI === "function") {
+            window.syncAllMasterDataUI();
           }
+        } else if (hasLocalMaster && typeof window.saveCloudMasterData === "function") {
+          window.saveCloudMasterData({
+            machines: YOKOHAMA_MACHINES,
+            areas: YOKOHAMA_AREAS,
+            processes: YOKOHAMA_PROCESSES,
+            categories: masterCategories,
+            responsibilities: masterResponsibilities,
+            natures: masterNatures,
+            technicians: (typeof technicians !== "undefined" && Array.isArray(technicians)) ? technicians : [],
+            updatedAt: new Date().toISOString()
+          }).catch(e => console.warn(e));
         }
+      } catch (mErr) {
+        console.warn("[Cloud Data] Master fetch notice:", mErr);
       }
 
       // 2. Fetch Incidents
@@ -678,9 +681,21 @@ async function fetchAuthenticatedCloudData(user) {
       });
       if (iRes.ok) {
         const iData = await iRes.json();
-        const cloudRecords = (iData && Array.isArray(iData.data)) ? iData.data : (iData && Array.isArray(iData.records) ? iData.records : null);
+        const rawRecords = (iData && Array.isArray(iData.data)) ? iData.data : (iData && Array.isArray(iData.records) ? iData.records : null);
+        const cloudRecords = rawRecords ? rawRecords.filter(r => r && r.id !== 'SYS_CONFIG_MASTER_DATA') : null;
+        const isPurged = localStorage.getItem("YOKOHAMA_LOGS_PURGED") === "true";
         if (cloudRecords && cloudRecords.length > 0) {
           downtimeRecords = cloudRecords;
+          window.downtimeRecords = downtimeRecords;
+          localStorage.removeItem("YOKOHAMA_LOGS_PURGED");
+          saveToStorage();
+          renderRecordsTable();
+          renderKPIs();
+          renderCharts();
+          populateDashboardMonths();
+          updateMaintenanceLogCount();
+        } else if (isPurged || (cloudRecords && cloudRecords.length === 0)) {
+          downtimeRecords = [];
           window.downtimeRecords = downtimeRecords;
           saveToStorage();
           renderRecordsTable();
@@ -688,18 +703,6 @@ async function fetchAuthenticatedCloudData(user) {
           renderCharts();
           populateDashboardMonths();
           updateMaintenanceLogCount();
-        } else if (cloudRecords && cloudRecords.length === 0) {
-          const isPurged = localStorage.getItem("YOKOHAMA_LOGS_PURGED") === "true";
-          if (isPurged) {
-            downtimeRecords = [];
-            window.downtimeRecords = downtimeRecords;
-            saveToStorage();
-            renderRecordsTable();
-            renderKPIs();
-            renderCharts();
-            populateDashboardMonths();
-            updateMaintenanceLogCount();
-          }
         }
       }
     } catch (e) {
@@ -2565,6 +2568,25 @@ function saveMasterDataToStorage() {
     localStorage.setItem("YOKOHAMA_MASTER_RESPONSIBILITIES", JSON.stringify(masterResponsibilities));
     localStorage.setItem("YOKOHAMA_MASTER_NATURES", JSON.stringify(masterNatures));
     localStorage.setItem("YOKOHAMA_MASTER_VERSION", "2026_master_v2");
+    if (typeof technicians !== "undefined" && Array.isArray(technicians)) {
+      localStorage.setItem("YOKOHAMA_TECHNICIANS", JSON.stringify(technicians));
+    }
+
+    const masterConfig = {
+      machines: YOKOHAMA_MACHINES,
+      areas: YOKOHAMA_AREAS,
+      processes: YOKOHAMA_PROCESSES,
+      categories: masterCategories,
+      responsibilities: masterResponsibilities,
+      natures: masterNatures,
+      technicians: (typeof technicians !== "undefined" && Array.isArray(technicians)) ? technicians : [],
+      updatedAt: new Date().toISOString()
+    };
+
+    // Automatic bidirectional autosync to Supabase
+    if (typeof window.saveCloudMasterData === "function") {
+      window.saveCloudMasterData(masterConfig).catch(e => console.warn("Cloud master data autosync notice:", e));
+    }
 
     // Asynchronously push to backend master-data endpoint if admin
     const token = (typeof getSessionToken === "function") ? getSessionToken() : (sessionStorage.getItem("YOKOHAMA_SESSION_TOKEN") || localStorage.getItem("YOKOHAMA_SESSION_TOKEN"));
@@ -2576,13 +2598,7 @@ function saveMasterDataToStorage() {
           "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-          areas: YOKOHAMA_AREAS,
-          categories: masterCategories,
-          natures: masterNatures,
-          responsibilities: masterResponsibilities,
-          technicians: (typeof technicians !== "undefined" && Array.isArray(technicians)) ? technicians : []
-        })
+        body: JSON.stringify(masterConfig)
       }).catch(e => console.warn("Cloud master data update warning:", e));
     }
   } catch (e) {
@@ -2594,11 +2610,52 @@ window.saveMasterDataToStorage = saveMasterDataToStorage;
 async function initStorage() {
   await loadMachinesMasterAsync();
   await loadChartAssetsAsync();
+
+  // Try to load custom Master Settings from Supabase Cloud
+  if (typeof window.fetchCloudMasterData === "function") {
+    try {
+      const cloudMaster = await window.fetchCloudMasterData();
+      if (cloudMaster && typeof cloudMaster === "object" && (cloudMaster.machines || cloudMaster.areas || cloudMaster.categories)) {
+        if (Array.isArray(cloudMaster.machines) && cloudMaster.machines.length > 0) {
+          YOKOHAMA_MACHINES = cloudMaster.machines;
+          localStorage.setItem("YOKOHAMA_MASTER_MACHINES", JSON.stringify(YOKOHAMA_MACHINES));
+        }
+        if (Array.isArray(cloudMaster.areas) && cloudMaster.areas.length > 0) {
+          YOKOHAMA_AREAS = cloudMaster.areas;
+          localStorage.setItem("YOKOHAMA_MASTER_AREAS", JSON.stringify(YOKOHAMA_AREAS));
+        }
+        if (Array.isArray(cloudMaster.processes) && cloudMaster.processes.length > 0) {
+          YOKOHAMA_PROCESSES = cloudMaster.processes;
+          localStorage.setItem("YOKOHAMA_MASTER_PROCESSES", JSON.stringify(YOKOHAMA_PROCESSES));
+        }
+        if (Array.isArray(cloudMaster.categories) && cloudMaster.categories.length > 0) {
+          masterCategories = cloudMaster.categories;
+          localStorage.setItem("YOKOHAMA_MASTER_CATEGORIES", JSON.stringify(masterCategories));
+        }
+        if (Array.isArray(cloudMaster.responsibilities) && cloudMaster.responsibilities.length > 0) {
+          masterResponsibilities = cloudMaster.responsibilities;
+          localStorage.setItem("YOKOHAMA_MASTER_RESPONSIBILITIES", JSON.stringify(masterResponsibilities));
+        }
+        if (Array.isArray(cloudMaster.natures) && cloudMaster.natures.length > 0) {
+          masterNatures = cloudMaster.natures;
+          localStorage.setItem("YOKOHAMA_MASTER_NATURES", JSON.stringify(masterNatures));
+        }
+        if (Array.isArray(cloudMaster.technicians) && cloudMaster.technicians.length > 0) {
+          technicians = cloudMaster.technicians;
+          localStorage.setItem("YOKOHAMA_TECHNICIANS", JSON.stringify(technicians));
+        }
+        localStorage.setItem("YOKOHAMA_MASTER_VERSION", "2026_master_v2");
+      }
+    } catch (e) {
+      console.warn("[InitStorage] Cloud master data load notice:", e);
+    }
+  }
+
   // Load Dynamic Master Registry with Versioning & Safe Fallbacks (Step 9 Fix)
   const masterVer = localStorage.getItem("YOKOHAMA_MASTER_VERSION");
   const storedMachines = localStorage.getItem("YOKOHAMA_MASTER_MACHINES");
-  let machinesLoaded = false;
-  if (masterVer === "2026_master_v2" && storedMachines) {
+  let machinesLoaded = (YOKOHAMA_MACHINES && YOKOHAMA_MACHINES.length > 0);
+  if (!machinesLoaded && masterVer === "2026_master_v2" && storedMachines) {
     try {
       const parsed = JSON.parse(storedMachines);
       if (Array.isArray(parsed) && parsed.length > 0) {
@@ -2694,9 +2751,12 @@ async function initStorage() {
   window.YOKOHAMA_MACHINES = YOKOHAMA_MACHINES;
   window.YOKOHAMA_PROCESSES = YOKOHAMA_PROCESSES;
 
+  const isPurged = localStorage.getItem("YOKOHAMA_LOGS_PURGED") === "true";
   const version = localStorage.getItem("YOKOHAMA_DATASET_VERSION");
   const stored = localStorage.getItem("YOKOHAMA_DOWNTIME_RECORDS");
-  if (version === "2026_empty_v1" && stored) {
+  if (isPurged) {
+    downtimeRecords = [];
+  } else if (version === "2026_empty_v1" && stored) {
     try {
       downtimeRecords = JSON.parse(stored);
     } catch (e) {
@@ -2706,8 +2766,9 @@ async function initStorage() {
   } else {
     downtimeRecords = [...INITIAL_RECORDS];
     localStorage.setItem("YOKOHAMA_DATASET_VERSION", "2026_empty_v1");
-    saveToStorage();
   }
+  window.downtimeRecords = downtimeRecords;
+  saveToStorage();
 
   // Ensure any cached records have isCritical defined and YOHT migrated to ATC, and have affectedMachines and totalDowntimeMinutes
   let recordsUpdated = false;
@@ -2935,6 +2996,40 @@ window.triggerManualCloudSync = async function() {
   try {
     let syncedCount = 0;
 
+    // 0. Bidirectional Master Settings synchronization with Supabase
+    if (typeof window.saveCloudMasterData === "function" && typeof window.fetchCloudMasterData === "function") {
+      try {
+        const cloudMaster = await window.fetchCloudMasterData();
+        if (cloudMaster && typeof cloudMaster === "object" && (cloudMaster.machines || cloudMaster.areas || cloudMaster.categories)) {
+          if (Array.isArray(cloudMaster.machines) && cloudMaster.machines.length > 0) YOKOHAMA_MACHINES = cloudMaster.machines;
+          if (Array.isArray(cloudMaster.areas) && cloudMaster.areas.length > 0) YOKOHAMA_AREAS = cloudMaster.areas;
+          if (Array.isArray(cloudMaster.processes) && cloudMaster.processes.length > 0) YOKOHAMA_PROCESSES = cloudMaster.processes;
+          if (Array.isArray(cloudMaster.categories) && cloudMaster.categories.length > 0) masterCategories = cloudMaster.categories;
+          if (Array.isArray(cloudMaster.responsibilities) && cloudMaster.responsibilities.length > 0) masterResponsibilities = cloudMaster.responsibilities;
+          if (Array.isArray(cloudMaster.natures) && cloudMaster.natures.length > 0) masterNatures = cloudMaster.natures;
+          if (Array.isArray(cloudMaster.technicians) && cloudMaster.technicians.length > 0) technicians = cloudMaster.technicians;
+          
+          if (typeof window.syncAllMasterDataUI === "function") {
+            window.syncAllMasterDataUI();
+          }
+        } else {
+          // Push current master settings to cloud
+          await window.saveCloudMasterData({
+            machines: YOKOHAMA_MACHINES,
+            areas: YOKOHAMA_AREAS,
+            processes: YOKOHAMA_PROCESSES,
+            categories: masterCategories,
+            responsibilities: masterResponsibilities,
+            natures: masterNatures,
+            technicians: (typeof technicians !== "undefined" && Array.isArray(technicians)) ? technicians : [],
+            updatedAt: new Date().toISOString()
+          });
+        }
+      } catch (mErr) {
+        console.warn("[Cloud Sync] Master settings sync notice:", mErr);
+      }
+    }
+
     // 1. Fetch live user accounts from Supabase
     if (typeof window.fetchCloudUserAccounts === "function") {
       try {
@@ -2976,13 +3071,21 @@ window.triggerManualCloudSync = async function() {
 
     // 2. Fetch live incidents from Supabase
     if (typeof window.fetchCloudIncidents === "function") {
-      const cloudData = await window.fetchCloudIncidents();
-      if (Array.isArray(cloudData)) {
+      const rawCloudData = await window.fetchCloudIncidents();
+      if (Array.isArray(rawCloudData)) {
+        const cloudData = rawCloudData.filter(r => r && r.id !== 'SYS_CONFIG_MASTER_DATA');
+        const isPurged = localStorage.getItem("YOKOHAMA_LOGS_PURGED") === "true";
         if (cloudData.length > 0) {
           downtimeRecords = cloudData;
           window.downtimeRecords = downtimeRecords;
           localStorage.setItem("YOKOHAMA_DOWNTIME_RECORDS", JSON.stringify(downtimeRecords));
+          localStorage.removeItem("YOKOHAMA_LOGS_PURGED");
           syncedCount = cloudData.length;
+        } else if (isPurged || downtimeRecords.length === 0) {
+          downtimeRecords = [];
+          window.downtimeRecords = downtimeRecords;
+          localStorage.setItem("YOKOHAMA_DOWNTIME_RECORDS", JSON.stringify([]));
+          syncedCount = 0;
         } else if (downtimeRecords.length > 0 && typeof window.bulkUpsertCloudIncidents === "function") {
           // Cloud database empty, push local records to Supabase
           await window.bulkUpsertCloudIncidents(downtimeRecords);
@@ -3001,6 +3104,7 @@ window.triggerManualCloudSync = async function() {
     if (typeof updateMaintenanceLogCount === "function") updateMaintenanceLogCount();
     if (typeof initMachineMultiSelectDropdown === "function") initMachineMultiSelectDropdown();
     if (typeof initAreaMultiSelectDropdown === "function") initAreaMultiSelectDropdown();
+    if (typeof renderMasterSettingsUI === "function") renderMasterSettingsUI();
 
     // 4. Success State Feedback
     if (icon) icon.className = "fa-solid fa-circle-check text-emerald-400 text-xs";
@@ -3010,7 +3114,7 @@ window.triggerManualCloudSync = async function() {
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     if (btn) btn.title = `Last synced: ${timeStr} (${syncedCount} incidents)`;
 
-    showToast(`Cloud Sync Successful! Updated ${syncedCount} incidents with Supabase.`, "success");
+    showToast(`Cloud Sync Successful! Synchronized Master Settings and ${syncedCount} incidents with Supabase.`, "success");
 
     setTimeout(() => {
       if (icon) icon.className = "fa-solid fa-cloud-arrow-up text-emerald-400 text-xs";
@@ -3031,7 +3135,7 @@ window.triggerManualCloudSync = async function() {
       if (text) text.textContent = "Cloud Sync";
       if (pulse) pulse.className = "w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse";
       if (btn) btn.disabled = false;
-    }, 3000);
+    }, 2500);
   }
 };
 

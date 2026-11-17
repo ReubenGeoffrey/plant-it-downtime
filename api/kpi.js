@@ -25,7 +25,7 @@ module.exports = async function handler(req, res) {
   try {
     const { month, year, startDate, endDate, area } = req.query || {};
 
-    let query = `${SUPABASE_URL}/rest/v1/incidents?select=*`;
+    let query = `${SUPABASE_URL}/rest/v1/incidents?select=*&id=neq.SYS_CONFIG_MASTER_DATA`;
     if (startDate) query += `&date=gte.${encodeURIComponent(startDate)}`;
     if (endDate) query += `&date=lte.${encodeURIComponent(endDate)}`;
     if (month && month !== 'ALL' && !startDate && !endDate) query += `&date=like.${encodeURIComponent(month)}*`;
@@ -41,7 +41,9 @@ module.exports = async function handler(req, res) {
     }
 
     const rows = await sRes.json();
-    const records = (Array.isArray(rows) ? rows : []).map(mapRowToRecord);
+    const records = (Array.isArray(rows) ? rows : [])
+      .filter(r => r && r.id !== 'SYS_CONFIG_MASTER_DATA')
+      .map(mapRowToRecord);
     const hasRecords = records.length > 0;
 
     // Check if the plant was operating during the period

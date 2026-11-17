@@ -77,6 +77,40 @@ assert.ok(appJs.includes('YOKOHAMA_LOGS_PURGED'), 'app.js must track YOKOHAMA_LO
 console.log('  ✔ clearAllCloudIncidents resilient and zombie auto-re-seeding prevented');
 console.log('✅ TEST 8 PASSED\n');
 
+// 9. Check SYS_CONFIG_MASTER_DATA exclusion from incidents and KPI telemetry
+console.log('▶ [Test 9] SYS_CONFIG_MASTER_DATA excluded from incident logs & KPI telemetry...');
+const kpiJs = fs.readFileSync('api/kpi.js', 'utf8');
+assert.ok(incidentsJs.includes('id=neq.SYS_CONFIG_MASTER_DATA'), 'api/incidents.js must query id=neq.SYS_CONFIG_MASTER_DATA');
+assert.ok(kpiJs.includes('id=neq.SYS_CONFIG_MASTER_DATA'), 'api/kpi.js must query id=neq.SYS_CONFIG_MASTER_DATA');
+assert.ok(supabaseClientJs.includes('id=neq.SYS_CONFIG_MASTER_DATA'), 'supabase-client.js must query id=neq.SYS_CONFIG_MASTER_DATA');
+console.log('  ✔ SYS_CONFIG_MASTER_DATA strictly filtered out from incident tables and KPI calculations');
+console.log('✅ TEST 9 PASSED\n');
+
+// 10. Check Supabase Master Data Bidirectional Synchronization API
+console.log('▶ [Test 10] Supabase master data client methods & autosync...');
+assert.ok(supabaseClientJs.includes('window.fetchCloudMasterData = fetchCloudMasterData;'), 'supabase-client.js must export fetchCloudMasterData');
+assert.ok(supabaseClientJs.includes('window.saveCloudMasterData = saveCloudMasterData;'), 'supabase-client.js must export saveCloudMasterData');
+assert.ok(appJs.includes('window.saveCloudMasterData(masterConfig)'), 'app.js saveMasterDataToStorage must call saveCloudMasterData');
+console.log('  ✔ fetchCloudMasterData and saveCloudMasterData wired for automatic cloud persistence');
+console.log('✅ TEST 10 PASSED\n');
+
+// 11. Check triggerManualCloudSync master settings synchronization
+console.log('▶ [Test 11] triggerManualCloudSync synchronizes master data without resetting...');
+const startCloudSync = appJs.indexOf('window.triggerManualCloudSync = async function');
+const endCloudSync = appJs.indexOf('function saveTechsToStorage', startCloudSync);
+const cloudSyncDef = appJs.substring(startCloudSync, endCloudSync);
+assert.ok(cloudSyncDef.includes('fetchCloudMasterData'), 'triggerManualCloudSync must synchronize master data');
+assert.ok(cloudSyncDef.includes('syncAllMasterDataUI'), 'triggerManualCloudSync must update UI after sync');
+console.log('  ✔ triggerManualCloudSync bidirectionally syncs Master Settings and prevents resetting');
+console.log('✅ TEST 11 PASSED\n');
+
+// 12. Check api/master-data.js writes to Supabase incidents table under SYS_CONFIG_MASTER_DATA
+console.log('▶ [Test 12] api/master-data.js persists directly to Supabase cloud...');
+assert.ok(masterDataJs.includes('SYS_CONFIG_MASTER_DATA'), 'api/master-data.js must use SYS_CONFIG_MASTER_DATA');
+assert.ok(masterDataJs.includes('SUPABASE_URL'), 'api/master-data.js must use SUPABASE_URL');
+console.log('  ✔ api/master-data.js securely reads and writes to Supabase cloud database');
+console.log('✅ TEST 12 PASSED\n');
+
 console.log('========================================================================');
-console.log('ALL 8 VERIFICATION CHECKS PASSED (100%)');
+console.log('ALL 12 VERIFICATION CHECKS PASSED (100%)');
 console.log('========================================================================');

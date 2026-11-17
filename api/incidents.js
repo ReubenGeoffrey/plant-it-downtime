@@ -22,7 +22,7 @@ module.exports = async function handler(req, res) {
     try {
       const { month, year, startDate, endDate, area, status } = req.query || {};
 
-      let query = `${SUPABASE_URL}/rest/v1/incidents?select=*&order=date.desc,id.desc`;
+      let query = `${SUPABASE_URL}/rest/v1/incidents?select=*&id=neq.SYS_CONFIG_MASTER_DATA&order=date.desc,id.desc`;
       if (startDate) query += `&date=gte.${encodeURIComponent(startDate)}`;
       if (endDate) query += `&date=lte.${encodeURIComponent(endDate)}`;
       if (month && month !== 'ALL' && !startDate && !endDate) query += `&date=like.${encodeURIComponent(month)}*`;
@@ -40,7 +40,9 @@ module.exports = async function handler(req, res) {
       }
 
       const rows = await sRes.json();
-      const records = (Array.isArray(rows) ? rows : []).map(mapRowToRecord);
+      const records = (Array.isArray(rows) ? rows : [])
+        .filter(r => r && r.id !== 'SYS_CONFIG_MASTER_DATA')
+        .map(mapRowToRecord);
 
       return res.status(200).json({ count: records.length, data: records, records });
     } catch (err) {
@@ -96,7 +98,7 @@ module.exports = async function handler(req, res) {
           const currentSnapshot = snapRes.ok ? await snapRes.json() : [];
 
           // 2. Clear current records
-          const delRes = await fetch(`${SUPABASE_URL}/rest/v1/incidents?id=neq.___NEVER___`, {
+          const delRes = await fetch(`${SUPABASE_URL}/rest/v1/incidents?id=neq.SYS_CONFIG_MASTER_DATA`, {
             method: 'DELETE',
             headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
           });
@@ -322,7 +324,7 @@ module.exports = async function handler(req, res) {
           });
         }
 
-        const cRes = await fetch(`${SUPABASE_URL}/rest/v1/incidents?id=neq.___NEVER___`, {
+        const cRes = await fetch(`${SUPABASE_URL}/rest/v1/incidents?id=neq.SYS_CONFIG_MASTER_DATA`, {
           method: 'DELETE',
           headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
         });
@@ -345,6 +347,10 @@ module.exports = async function handler(req, res) {
 
       if (!id) {
         return res.status(400).json({ error: 'Incident ID is required for deletion' });
+      }
+
+      if (id === 'SYS_CONFIG_MASTER_DATA') {
+        return res.status(400).json({ error: 'System configuration record cannot be deleted via incident endpoint' });
       }
 
       const dRes = await fetch(`${SUPABASE_URL}/rest/v1/incidents?id=eq.${encodeURIComponent(id)}`, {
