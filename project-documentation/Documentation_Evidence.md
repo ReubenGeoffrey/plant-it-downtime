@@ -21,7 +21,7 @@
 | **Custom Canvas** | HTML5 Canvas 2D | High-DPI Context | `app.js` (`drawSpeedometerToCanvas`) | Calibrated needle speedometer (0% to 100%, 99% Target mark) |
 | **Spreadsheet Engine** | ExcelJS | 4.4.0 (npm & client) | `exceljs.min.js`, `app.js` | Dual-sheet workbook generation with 9 embedded visual chart assets |
 | **Serverless Compute** | Vercel Serverless Functions | Node.js 24.x runtime | `api/*.js` | Serverless endpoints in `iad1` region responding in <120ms |
-| **Cloud Database** | PostgreSQL 15 | Managed Supabase | Cloud Cluster (`mrzlgrkkqdijoruchpgb`) | Relational tables `public.incidents` & `public.user_accounts` |
+| **Cloud Database** | PostgreSQL 15 | Managed Supabase | Cloud Cluster (`supabase-project`) | Relational tables `public.incidents` & `public.user_accounts` |
 | **API Protocol** | PostgREST / RESTful JSON | PostgREST v12 | `api/utils.js`, `api/incidents.js` | Snake-case PostgreSQL column translation with Bearer JWT |
 | **Authentication** | HMAC-SHA256 Signed JWT | 24-Hour Expiry | `api/utils.js`, `api/auth.js` | Secure session verification with role-based token payload |
 | **Rate Limiting** | Sliding Window Token Bucket | 5 reqs / 60 sec | `api/auth.js`, `api/utils.js` | IP & username brute-force defense returning HTTP 429 |

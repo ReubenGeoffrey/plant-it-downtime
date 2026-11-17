@@ -11,7 +11,7 @@
 **Spec:** `docs/superpowers/specs/2026-10-03-supabase-vercel-online-migration-design.md`
 
 ## Global Constraints
-- **Cloud Backend**: Supabase Project URL: `https://mrzlgrkkqdijoruchpgb.supabase.co` with verified Anon Public Key.
+- **Cloud Backend**: Supabase Project URL: `https://<supabase-project-id>.supabase.co` with verified Anon Public Key.
 - **Strict Authentication**: No 1-click role shortcut buttons permitted on the login UI; username and password are mandatory.
 - **Multi-IP Access**: Database and Vercel app must be globally reachable from any device or IP address.
 - **Compatibility**: All existing features (Machine Uptime Matrix, Day-by-Day calculations, ExcelJS dual-sheet export, and Template Import 2 auto-mapping) must remain 100% operational with the cloud backend.
@@ -33,7 +33,7 @@
 - Test: `test_supabase_connection.js`
 
 **Interfaces:**
-- Consumes: Supabase Project URL (`https://mrzlgrkkqdijoruchpgb.supabase.co`) & Anon Key
+- Consumes: Supabase Project URL (`https://<supabase-project-id>.supabase.co`) & Anon Key
 - Produces: `window.supabaseClient` (authenticated client interface for queries and real-time subscriptions)
 
 - [ ] **Step 1: Write connection verification test**

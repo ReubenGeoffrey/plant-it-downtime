@@ -9,7 +9,7 @@ Previously, the system operated using `localStorage` on a local machine via an e
 ## 3. Goals & Requirements
 1. **Cloud Database (Supabase)**:
    - Central PostgreSQL backend with real-time replication.
-   - Endpoint: `https://mrzlgrkkqdijoruchpgb.supabase.co`.
+   - Endpoint: `https://<supabase-project-id>.supabase.co`.
    - All incident logs and machine availability data are stored centrally in the `incidents` table.
 2. **Strict Credential Authentication (No Shortcuts)**:
    - Eliminate all role shortcut buttons (*Operator*, *Supervisor*, *Admin*) from the sign-in modal.
