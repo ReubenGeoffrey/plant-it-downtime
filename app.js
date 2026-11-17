@@ -688,6 +688,18 @@ async function fetchAuthenticatedCloudData(user) {
           renderCharts();
           populateDashboardMonths();
           updateMaintenanceLogCount();
+        } else if (cloudRecords && cloudRecords.length === 0) {
+          const isPurged = localStorage.getItem("YOKOHAMA_LOGS_PURGED") === "true";
+          if (isPurged) {
+            downtimeRecords = [];
+            window.downtimeRecords = downtimeRecords;
+            saveToStorage();
+            renderRecordsTable();
+            renderKPIs();
+            renderCharts();
+            populateDashboardMonths();
+            updateMaintenanceLogCount();
+          }
         }
       }
     } catch (e) {
@@ -2842,9 +2854,19 @@ async function initStorage() {
         if (typeof renderKPIs === "function") renderKPIs();
         if (typeof renderCharts === "function") renderCharts();
         if (typeof renderRecordsTable === "function") renderRecordsTable();
-      } else if (downtimeRecords.length > 0 && typeof window.bulkUpsertCloudIncidents === "function") {
-        console.log("[Supabase] Cloud database empty, seeding local records to Supabase...");
-        window.bulkUpsertCloudIncidents(downtimeRecords).catch(e => console.warn(e));
+      } else if (Array.isArray(cloudData) && cloudData.length === 0) {
+        const isPurged = localStorage.getItem("YOKOHAMA_LOGS_PURGED") === "true";
+        if (isPurged) {
+          downtimeRecords = [];
+          window.downtimeRecords = downtimeRecords;
+          localStorage.setItem("YOKOHAMA_DOWNTIME_RECORDS", "[]");
+          if (typeof renderKPIs === "function") renderKPIs();
+          if (typeof renderCharts === "function") renderCharts();
+          if (typeof renderRecordsTable === "function") renderRecordsTable();
+        } else if (downtimeRecords.length > 0 && typeof window.bulkUpsertCloudIncidents === "function") {
+          console.log("[Supabase] Cloud database empty, seeding local records to Supabase...");
+          window.bulkUpsertCloudIncidents(downtimeRecords).catch(e => console.warn(e));
+        }
       }
     } catch (err) {
       console.warn("[Supabase] Cloud fetch failed, using local cache:", err);
@@ -5447,8 +5469,8 @@ window.openConfirmResetModal = function(actionType) {
   const btn = document.getElementById("btnExecuteDestructiveAction");
   const errorMsg = document.getElementById("confirmResetError");
 
-  if (input) input.value = "";
-  if (btn) btn.disabled = true;
+  if (input) input.value = "CONFIRM RESET";
+  if (btn) btn.disabled = false;
   if (errorMsg) errorMsg.classList.add("hidden");
 
   if (actionType === 'CLEAR_ALL_LOGS') {
@@ -5546,6 +5568,7 @@ window.executeDestructiveActionConfirmed = async function() {
     }
 
     // 2. Clear in-memory and storage
+    localStorage.setItem("YOKOHAMA_LOGS_PURGED", "true");
     downtimeRecords = [];
     window.downtimeRecords = downtimeRecords;
     saveToStorage();
@@ -8803,6 +8826,7 @@ window.confirmDowntimeImport = function() {
     window.downtimeRecords = downtimeRecords;
   }
 
+  localStorage.removeItem("YOKOHAMA_LOGS_PURGED");
   pendingImportRecords.forEach(r => {
     if (r.category && !masterCategories.some(c => c.toLowerCase() === r.category.toLowerCase())) {
       masterCategories.push(r.category);

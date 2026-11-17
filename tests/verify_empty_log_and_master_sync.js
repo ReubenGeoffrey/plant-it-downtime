@@ -11,12 +11,13 @@ const incidentsJs = fs.readFileSync('api/incidents.js', 'utf8');
 const masterDataJs = fs.readFileSync('api/master-data.js', 'utf8');
 const supabaseClientJs = fs.readFileSync('supabase-client.js', 'utf8');
 
-// 1. Check Auto-Fill and Enter Key handling in index.html
-console.log('▶ [Test 1] Auto-Fill button and Enter key listener in index.html...');
-assert.ok(indexHtml.includes('quickFillConfirmReset()'), 'index.html must have quickFillConfirmReset Auto-Fill button');
-assert.ok(indexHtml.includes('Auto-Fill'), 'index.html must have Auto-Fill label');
+// 1. Check clean confirm modal and Enter Key handling in index.html
+console.log('▶ [Test 1] Clean confirm modal and Enter key listener in index.html...');
+assert.ok(indexHtml.includes('id="confirmResetModal"'), 'index.html must have confirmResetModal');
+assert.ok(indexHtml.includes('CONFIRM RESET'), 'index.html must instruct typing CONFIRM RESET');
 assert.ok(indexHtml.includes("event.key==='Enter'"), 'index.html must support Enter key submission');
-console.log('  ✔ Auto-Fill button and Enter key listener present');
+assert.ok(!indexHtml.includes('Auto-Fill'), 'index.html must not contain autofill button clutter');
+console.log('  ✔ Clean modal and Enter key listener present without autofill button');
 console.log('✅ TEST 1 PASSED\n');
 
 // 2. Check window.syncAllMasterDataUI in app.js
@@ -40,11 +41,12 @@ assert.ok(appJs.includes('handleSavePersonnelMaster'), 'handleSavePersonnelMaste
 console.log('  ✔ All master CRUD handlers trigger unified UI synchronization');
 console.log('✅ TEST 3 PASSED\n');
 
-// 4. Check Case-Insensitive confirmation & quickFill in app.js
-console.log('▶ [Test 4] Case-insensitive confirm reset and quickFillConfirmReset in app.js...');
-assert.ok(appJs.includes('window.quickFillConfirmReset = function()'), 'app.js must export quickFillConfirmReset');
+// 4. Check seamless pre-fill and case-insensitive confirmation in app.js
+console.log('▶ [Test 4] Seamless pre-fill & flexible confirmation phrase in app.js...');
+assert.ok(appJs.includes('input.value = "CONFIRM RESET"'), 'openConfirmResetModal must pre-populate input for 1-click execution');
+assert.ok(appJs.includes('btn.disabled = false'), 'openConfirmResetModal must enable button immediately');
 assert.ok(appJs.includes('val === "CONFIRM RESET" || val === "CONFIRM" || val === "YES" || val === "RESET"'), 'app.js must accept flexible case-insensitive confirmation phrases');
-console.log('  ✔ Auto-Fill and flexible confirmation phrase enabled');
+console.log('  ✔ Pre-filled execution and flexible confirmation phrase enabled');
 console.log('✅ TEST 4 PASSED\n');
 
 // 5. Check empty log modal opens without blocking
@@ -68,10 +70,11 @@ assert.ok(masterDataJs.includes("req.method === 'PUT'"), 'api/master-data.js mus
 console.log('  ✔ PUT and GET handlers active in api/master-data.js');
 console.log('✅ TEST 7 PASSED\n');
 
-// 8. Check resilient clearAllCloudIncidents in supabase-client.js
-console.log('▶ [Test 8] supabase-client.js passes query params and body for clear_all...');
+// 8. Check resilient clearAllCloudIncidents in supabase-client.js & purge persistence
+console.log('▶ [Test 8] supabase-client.js passes query params and body for clear_all & purge persistence...');
 assert.ok(supabaseClientJs.includes('/api/incidents?action=clear_all&confirmPhrase='), 'supabase-client.js must pass query params');
-console.log('  ✔ clearAllCloudIncidents is resilient against proxy body-stripping');
+assert.ok(appJs.includes('YOKOHAMA_LOGS_PURGED'), 'app.js must track YOKOHAMA_LOGS_PURGED to prevent zombie cloud re-seeding');
+console.log('  ✔ clearAllCloudIncidents resilient and zombie auto-re-seeding prevented');
 console.log('✅ TEST 8 PASSED\n');
 
 console.log('========================================================================');
