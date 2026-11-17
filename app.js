@@ -672,7 +672,7 @@ async function fetchAuthenticatedCloudData(user) {
       if (iRes.ok) {
         const iData = await iRes.json();
         const cloudRecords = (iData && Array.isArray(iData.data)) ? iData.data : (iData && Array.isArray(iData.records) ? iData.records : null);
-        if (cloudRecords) {
+        if (cloudRecords && cloudRecords.length > 0) {
           downtimeRecords = cloudRecords;
           window.downtimeRecords = downtimeRecords;
           saveToStorage();
@@ -2853,6 +2853,8 @@ window.triggerManualCloudSync = async function() {
           await window.bulkUpsertCloudIncidents(downtimeRecords);
           syncedCount = downtimeRecords.length;
         }
+      } else if (typeof window.isFirebaseActive !== "function" || !window.isFirebaseActive()) {
+        throw new Error("Unable to connect to Supabase database. Please check network connection.");
       }
     }
 

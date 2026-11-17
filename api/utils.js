@@ -158,9 +158,6 @@ function mapRecordToRow(record) {
   return {
     id: String(record.id),
     date: recDate,
-    issue_time: record.issueTime || '',
-    closed_time: record.closedTime || '',
-    shift: record.shift || 'Shift A',
     nature: record.nature || 'MES',
     area: record.area || 'Plant-1',
     process: record.process || 'General',
@@ -176,12 +173,7 @@ function mapRecordToRow(record) {
     closed_date: closedDateVal,
     responsible_person: resp,
     status: record.status || 'Open',
-    remarks: record.remarks || '',
-    created_by: record.createdBy || 'System',
-    created_by_name: record.createdByName || record.createdBy || 'System',
-    updated_by: record.updatedBy || 'System',
-    actor_name: record.actorName || record.updatedBy || 'System',
-    updated_at: new Date().toISOString()
+    remarks: record.remarks || ''
   };
 }
 
