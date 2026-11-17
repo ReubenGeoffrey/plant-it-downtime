@@ -13,7 +13,7 @@
     "test:user5": "node tests/verify_user_5_requests.js",
     "test:obs": "node tests/verify_enterprise_dashboard.js",
     "test:firebase": "node tests/verify_firebase_integration.js",
-    "test:all": "node tests/run_tests.js && node tests/run_acceptance_tests.js && node tests/verify_18_regressions.js && node tests/verify_phase1_phase2_fixes.js && node tests/verify_user_5_requests.js && node tests/verify_enterprise_dashboard.js && node tests/verify_firebase_integration.js",
+    "test:all": "node tests/run_tests.js && node tests/run_acceptance_tests.js && node tests/verify_18_regressions.js && node tests/verify_phase1_phase2_fixes.js && node tests/verify_user_5_requests.js && node tests/verify_enterprise_dashboard.js && node tests/verify_firebase_integration.js && node tests/verify_empty_log_and_master_sync.js && node tests/verify_26_defects.js",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"

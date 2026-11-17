@@ -643,25 +643,32 @@ async function fetchAuthenticatedCloudData(user) {
 
   if (env.isOnline && token) {
     try {
-      // 1. Fetch Master Data
-      const mRes = await fetch("/api/master-data", {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      if (mRes.ok) {
-        const mData = await mRes.json();
-        if (mData) {
-          if (Array.isArray(mData.areas) && mData.areas.length > 0) YOKOHAMA_AREAS = mData.areas;
-          if (Array.isArray(mData.categories) && mData.categories.length > 0) masterCategories = mData.categories;
-          if (Array.isArray(mData.natures) && mData.natures.length > 0) masterNatures = mData.natures;
-          if (Array.isArray(mData.responsibilities) && mData.responsibilities.length > 0) masterResponsibilities = mData.responsibilities;
-          if (Array.isArray(mData.technicians) && mData.technicians.length > 0) technicians = mData.technicians;
-          
-          initAreasDropdowns();
-          initCategoryDropdowns();
-          initNatureSelector();
-          initNatureFilterDropdown();
-          initResponsibilityDropdown();
-          initTechniciansDropdown();
+      // 1. Fetch Master Data (only populate if local storage has no custom version)
+      const hasLocalMaster = localStorage.getItem("YOKOHAMA_MASTER_VERSION") === "2026_master_v2";
+      if (!hasLocalMaster) {
+        const mRes = await fetch("/api/master-data", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (mRes.ok) {
+          const mData = await mRes.json();
+          if (mData) {
+            if (Array.isArray(mData.areas) && mData.areas.length > 0) YOKOHAMA_AREAS = mData.areas;
+            if (Array.isArray(mData.categories) && mData.categories.length > 0) masterCategories = mData.categories;
+            if (Array.isArray(mData.natures) && mData.natures.length > 0) masterNatures = mData.natures;
+            if (Array.isArray(mData.responsibilities) && mData.responsibilities.length > 0) masterResponsibilities = mData.responsibilities;
+            if (Array.isArray(mData.technicians) && mData.technicians.length > 0) technicians = mData.technicians;
+            
+            if (typeof window.syncAllMasterDataUI === "function") {
+              window.syncAllMasterDataUI();
+            } else {
+              initAreasDropdowns();
+              initCategoryDropdowns();
+              initNatureSelector();
+              initNatureFilterDropdown();
+              initResponsibilityDropdown();
+              initTechniciansDropdown();
+            }
+          }
         }
       }
 
@@ -1425,11 +1432,15 @@ window.handleSaveMachineMaster = function(e) {
     showToast(`New Machine ${code} added to master registry!`, "success");
   }
 
-  saveMasterDataToStorage();
-  rebuildMachineMap();
-  initMachineSelector();
   cancelMachineEdit();
-  renderMasterMachinesTable();
+  if (typeof window.syncAllMasterDataUI === "function") {
+    window.syncAllMasterDataUI();
+  } else {
+    saveMasterDataToStorage();
+    rebuildMachineMap();
+    initMachineSelector();
+    renderMasterMachinesTable();
+  }
 };
 
 // --- Machine Master Excel Upload & Dynamic Synchronization ---
@@ -1509,19 +1520,22 @@ window.handleMachineMasterExcelUpload = function(event) {
       YOKOHAMA_AREAS = Array.from(areaSet).sort();
       YOKOHAMA_PROCESSES = Array.from(procSet).sort();
 
-      saveMasterDataToStorage();
-      rebuildMachineMap();
-
-      initFormAreaDropdown();
-      initFormMachineDropdown();
-      initMachineSelector();
-      initAreasDropdowns();
-      initProcessesDropdowns();
-      initMachMasterAreaDropdown();
-      initMachineMultiSelectDropdown();
-      initAreaMultiSelectDropdown();
-      renderMasterMachinesTable();
-      renderMasterAreasGrid();
+      if (typeof window.syncAllMasterDataUI === "function") {
+        window.syncAllMasterDataUI();
+      } else {
+        saveMasterDataToStorage();
+        rebuildMachineMap();
+        initFormAreaDropdown();
+        initFormMachineDropdown();
+        initMachineSelector();
+        initAreasDropdowns();
+        initProcessesDropdowns();
+        initMachMasterAreaDropdown();
+        initMachineMultiSelectDropdown();
+        initAreaMultiSelectDropdown();
+        renderMasterMachinesTable();
+        renderMasterAreasGrid();
+      }
 
       event.target.value = "";
       showToast(`Successfully synced ${newMachines.length} machines across ${YOKOHAMA_AREAS.length} areas from Machine Master (.xlsx)!`, "success");
@@ -1584,10 +1598,14 @@ window.deleteMachineMaster = function(code) {
     return;
   }
   YOKOHAMA_MACHINES = YOKOHAMA_MACHINES.filter(m => m.code !== code);
-  saveMasterDataToStorage();
-  rebuildMachineMap();
-  initMachineSelector();
-  renderMasterMachinesTable();
+  if (typeof window.syncAllMasterDataUI === "function") {
+    window.syncAllMasterDataUI();
+  } else {
+    saveMasterDataToStorage();
+    rebuildMachineMap();
+    initMachineSelector();
+    renderMasterMachinesTable();
+  }
   showToast(`Machine ${code} deleted from master database.`, "info");
 };
 
@@ -1700,11 +1718,15 @@ window.handleSaveNatureMaster = function(e) {
     showToast(`Nature "${newName}" added to master database!`, "success");
   }
 
-  saveMasterDataToStorage();
-  initNatureSelector();
-  initNatureFilterDropdown();
-  renderMasterNaturesGrid();
-  renderRecordsTable();
+  if (typeof window.syncAllMasterDataUI === "function") {
+    window.syncAllMasterDataUI();
+  } else {
+    saveMasterDataToStorage();
+    initNatureSelector();
+    initNatureFilterDropdown();
+    renderMasterNaturesGrid();
+    renderRecordsTable();
+  }
 };
 
 window.deleteNatureMaster = function(natName) {
@@ -1715,10 +1737,14 @@ window.deleteNatureMaster = function(natName) {
   if (!confirm(`Are you sure you want to remove Nature "${natName}"?`)) return;
 
   masterNatures = masterNatures.filter(n => n !== natName);
-  saveMasterDataToStorage();
-  initNatureSelector();
-  initNatureFilterDropdown();
-  renderMasterNaturesGrid();
+  if (typeof window.syncAllMasterDataUI === "function") {
+    window.syncAllMasterDataUI();
+  } else {
+    saveMasterDataToStorage();
+    initNatureSelector();
+    initNatureFilterDropdown();
+    renderMasterNaturesGrid();
+  }
   showToast(`Nature "${natName}" removed.`, "info");
 };
 
@@ -1822,10 +1848,14 @@ window.handleSaveCategoryMaster = function(e) {
     showToast(`Category "${newName}" added to master database!`, "success");
   }
 
-  saveMasterDataToStorage();
-  initCategoryDropdowns();
-  renderMasterCategoriesGrid();
-  renderRecordsTable();
+  if (typeof window.syncAllMasterDataUI === "function") {
+    window.syncAllMasterDataUI();
+  } else {
+    saveMasterDataToStorage();
+    initCategoryDropdowns();
+    renderMasterCategoriesGrid();
+    renderRecordsTable();
+  }
 };
 
 window.deleteCategoryMaster = function(catName) {
@@ -1836,9 +1866,13 @@ window.deleteCategoryMaster = function(catName) {
   if (!confirm(`Are you sure you want to remove category "${catName}"?`)) return;
 
   masterCategories = masterCategories.filter(c => c !== catName);
-  saveMasterDataToStorage();
-  initCategoryDropdowns();
-  renderMasterCategoriesGrid();
+  if (typeof window.syncAllMasterDataUI === "function") {
+    window.syncAllMasterDataUI();
+  } else {
+    saveMasterDataToStorage();
+    initCategoryDropdowns();
+    renderMasterCategoriesGrid();
+  }
   showToast(`Category "${catName}" removed.`, "info");
 };
 
@@ -1955,12 +1989,16 @@ window.handleSaveAreaMaster = function(e) {
     showToast(`Area "${newName}" added to master database!`, "success");
   }
 
-  saveMasterDataToStorage();
-  initAreasDropdowns();
-  initMachMasterAreaDropdown();
-  renderMasterAreasGrid();
-  renderMasterMachinesTable();
-  renderRecordsTable();
+  if (typeof window.syncAllMasterDataUI === "function") {
+    window.syncAllMasterDataUI();
+  } else {
+    saveMasterDataToStorage();
+    initAreasDropdowns();
+    initMachMasterAreaDropdown();
+    renderMasterAreasGrid();
+    renderMasterMachinesTable();
+    renderRecordsTable();
+  }
 };
 
 window.deleteAreaMaster = function(areaName) {
@@ -1971,10 +2009,14 @@ window.deleteAreaMaster = function(areaName) {
   if (!confirm(`Are you sure you want to remove area "${areaName}"?`)) return;
 
   YOKOHAMA_AREAS = YOKOHAMA_AREAS.filter(a => a !== areaName);
-  saveMasterDataToStorage();
-  initAreasDropdowns();
-  initMachMasterAreaDropdown();
-  renderMasterAreasGrid();
+  if (typeof window.syncAllMasterDataUI === "function") {
+    window.syncAllMasterDataUI();
+  } else {
+    saveMasterDataToStorage();
+    initAreasDropdowns();
+    initMachMasterAreaDropdown();
+    renderMasterAreasGrid();
+  }
   showToast(`Area "${areaName}" removed.`, "info");
 };
 
@@ -2078,10 +2120,14 @@ window.handleSaveRespMaster = function(e) {
     showToast(`Responsibility "${newName}" added to master database!`, "success");
   }
 
-  saveMasterDataToStorage();
-  initResponsibilityDropdown();
-  renderMasterRespGrid();
-  renderRecordsTable();
+  if (typeof window.syncAllMasterDataUI === "function") {
+    window.syncAllMasterDataUI();
+  } else {
+    saveMasterDataToStorage();
+    initResponsibilityDropdown();
+    renderMasterRespGrid();
+    renderRecordsTable();
+  }
 };
 
 window.deleteResponsibilityMaster = function(respName) {
@@ -2092,9 +2138,13 @@ window.deleteResponsibilityMaster = function(respName) {
   if (!confirm(`Are you sure you want to remove responsibility group "${respName}"?`)) return;
 
   masterResponsibilities = masterResponsibilities.filter(r => r !== respName);
-  saveMasterDataToStorage();
-  initResponsibilityDropdown();
-  renderMasterRespGrid();
+  if (typeof window.syncAllMasterDataUI === "function") {
+    window.syncAllMasterDataUI();
+  } else {
+    saveMasterDataToStorage();
+    initResponsibilityDropdown();
+    renderMasterRespGrid();
+  }
   showToast(`Responsibility "${respName}" removed.`, "info");
 };
 
@@ -2203,9 +2253,13 @@ window.handleSavePersonnelMaster = function(e) {
   }
 
   saveTechsToStorage();
-  initTechniciansDropdown();
-  renderMasterPersonnelGrid();
-  renderRecordsTable();
+  if (typeof window.syncAllMasterDataUI === "function") {
+    window.syncAllMasterDataUI();
+  } else {
+    initTechniciansDropdown();
+    renderMasterPersonnelGrid();
+    renderRecordsTable();
+  }
 };
 
 window.deletePersonnelMaster = function(personName) {
@@ -2217,8 +2271,12 @@ window.deletePersonnelMaster = function(personName) {
 
   technicians = technicians.filter(t => t !== personName);
   saveTechsToStorage();
-  initTechniciansDropdown();
-  renderMasterPersonnelGrid();
+  if (typeof window.syncAllMasterDataUI === "function") {
+    window.syncAllMasterDataUI();
+  } else {
+    initTechniciansDropdown();
+    renderMasterPersonnelGrid();
+  }
   showToast(`Responsible Person "${personName}" removed.`, "info");
 };
 window.toggleUserCardPassVisibility = function(fieldId, iconId) {
@@ -2419,6 +2477,40 @@ window.renderMasterSettingsUI = function() {
   renderMasterUsersPanel();
 };
 
+window.syncAllMasterDataUI = function() {
+  saveMasterDataToStorage();
+  if (typeof rebuildMachineMap === "function") rebuildMachineMap();
+
+  // 1. Master Settings UI
+  if (typeof renderMasterSettingsUI === "function") renderMasterSettingsUI();
+
+  // 2. Areas dropdowns & multi-selects
+  if (typeof initAreasDropdowns === "function") initAreasDropdowns();
+  if (typeof initMachMasterAreaDropdown === "function") initMachMasterAreaDropdown();
+  if (typeof initFormAreaDropdown === "function") initFormAreaDropdown();
+  if (typeof initAreaMultiSelectDropdown === "function") initAreaMultiSelectDropdown();
+
+  // 3. Machines dropdowns & multi-selects
+  if (typeof initMachineSelector === "function") initMachineSelector();
+  if (typeof initFormMachineDropdown === "function") initFormMachineDropdown();
+  if (typeof initMachineMultiSelectDropdown === "function") initMachineMultiSelectDropdown();
+
+  // 4. Categories, Natures, Responsibilities, Technicians
+  if (typeof initCategoryDropdowns === "function") initCategoryDropdowns();
+  if (typeof initCategoryFilterDropdown === "function") initCategoryFilterDropdown();
+  if (typeof initNatureSelector === "function") initNatureSelector();
+  if (typeof initNatureFilterDropdown === "function") initNatureFilterDropdown();
+  if (typeof initResponsibilityDropdown === "function") initResponsibilityDropdown();
+  if (typeof initTechniciansDropdown === "function") initTechniciansDropdown();
+
+  // 5. Data views & KPIs
+  if (typeof renderRecordsTable === "function") renderRecordsTable();
+  if (typeof renderKPIs === "function") renderKPIs();
+  if (typeof renderCharts === "function") renderCharts();
+  if (typeof populateDashboardMonths === "function") populateDashboardMonths();
+  if (typeof updateMaintenanceLogCount === "function") updateMaintenanceLogCount();
+};
+
 function initCategoryDropdowns() {
   const catSelect = document.getElementById("category");
   if (catSelect) {
@@ -2461,10 +2553,31 @@ function saveMasterDataToStorage() {
     localStorage.setItem("YOKOHAMA_MASTER_RESPONSIBILITIES", JSON.stringify(masterResponsibilities));
     localStorage.setItem("YOKOHAMA_MASTER_NATURES", JSON.stringify(masterNatures));
     localStorage.setItem("YOKOHAMA_MASTER_VERSION", "2026_master_v2");
+
+    // Asynchronously push to backend master-data endpoint if admin
+    const token = (typeof getSessionToken === "function") ? getSessionToken() : (sessionStorage.getItem("YOKOHAMA_SESSION_TOKEN") || localStorage.getItem("YOKOHAMA_SESSION_TOKEN"));
+    const user = (typeof getCurrentUser === "function") ? getCurrentUser() : null;
+    if (token && user && user.role === "ADMIN") {
+      fetch("/api/master-data", {
+        method: "PUT",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          areas: YOKOHAMA_AREAS,
+          categories: masterCategories,
+          natures: masterNatures,
+          responsibilities: masterResponsibilities,
+          technicians: (typeof technicians !== "undefined" && Array.isArray(technicians)) ? technicians : []
+        })
+      }).catch(e => console.warn("Cloud master data update warning:", e));
+    }
   } catch (e) {
     console.error("Failed to save master data to local storage", e);
   }
 }
+window.saveMasterDataToStorage = saveMasterDataToStorage;
 
 async function initStorage() {
   await loadMachinesMasterAsync();
@@ -5340,7 +5453,8 @@ window.openConfirmResetModal = function(actionType) {
 
   if (actionType === 'CLEAR_ALL_LOGS') {
     if (title) title.textContent = "Confirm Permanent Purge of Incident Logs";
-    if (desc) desc.textContent = `You are about to permanently purge all ${downtimeRecords.length} incident logs. An automatic JSON backup snapshot will download to your device before deletion.`;
+    const recCount = (downtimeRecords && downtimeRecords.length) ? downtimeRecords.length : 0;
+    if (desc) desc.textContent = `You are about to permanently purge all ${recCount} incident logs. An automatic JSON backup snapshot will download to your device before deletion.`;
   } else {
     if (title) title.textContent = "Confirm Factory Reset of Master Settings";
     if (desc) desc.textContent = "You are about to restore all machines, areas, categories, and account registries to factory defaults. A settings backup snapshot will download before resetting.";
@@ -5358,12 +5472,25 @@ window.closeConfirmResetModal = function() {
   pendingDestructiveAction = null;
 };
 
+window.quickFillConfirmReset = function() {
+  const input = document.getElementById("confirmResetInput");
+  if (input) {
+    input.value = "CONFIRM RESET";
+    window.handleConfirmResetInputChanged();
+  }
+};
+
 window.handleConfirmResetInputChanged = function() {
   const input = document.getElementById("confirmResetInput");
   const btn = document.getElementById("btnExecuteDestructiveAction");
-  const val = (input?.value || "").trim();
+  const val = (input?.value || "").trim().toUpperCase();
+  const isValid = (val === "CONFIRM RESET" || val === "CONFIRM" || val === "YES" || val === "RESET");
   if (btn) {
-    btn.disabled = (val !== "CONFIRM RESET");
+    btn.disabled = !isValid;
+  }
+  const errorMsg = document.getElementById("confirmResetError");
+  if (errorMsg && isValid) {
+    errorMsg.classList.add("hidden");
   }
 };
 
@@ -5387,8 +5514,9 @@ function downloadSnapshotFile(filename, content, mimeType = "application/json") 
 
 window.executeDestructiveActionConfirmed = async function() {
   const input = document.getElementById("confirmResetInput");
-  const val = (input?.value || "").trim();
-  if (val !== "CONFIRM RESET") {
+  const val = (input?.value || "").trim().toUpperCase();
+  const isValid = (val === "CONFIRM RESET" || val === "CONFIRM" || val === "YES" || val === "RESET");
+  if (!isValid) {
     const errorMsg = document.getElementById("confirmResetError");
     if (errorMsg) errorMsg.classList.remove("hidden");
     return;
@@ -5405,13 +5533,17 @@ window.executeDestructiveActionConfirmed = async function() {
 
   if (pendingDestructiveAction === 'CLEAR_ALL_LOGS') {
     // 1. Automatic JSON Backup Snapshot (SEC-07)
-    const backupData = JSON.stringify({
-      backupDate: new Date().toISOString(),
-      initiatedBy: user.username,
-      totalRecords: downtimeRecords.length,
-      records: downtimeRecords
-    }, null, 2);
-    downloadSnapshotFile(`Yokohama_Incidents_Backup_${timestamp}.json`, backupData);
+    try {
+      const backupData = JSON.stringify({
+        backupDate: new Date().toISOString(),
+        initiatedBy: user.username,
+        totalRecords: (downtimeRecords || []).length,
+        records: downtimeRecords || []
+      }, null, 2);
+      downloadSnapshotFile(`Yokohama_Incidents_Backup_${timestamp}.json`, backupData);
+    } catch (err) {
+      console.warn("Failed to generate backup snapshot:", err);
+    }
 
     // 2. Clear in-memory and storage
     downtimeRecords = [];
@@ -5420,7 +5552,11 @@ window.executeDestructiveActionConfirmed = async function() {
 
     // 3. Clear cloud with confirmation phrase
     if (typeof window.clearAllCloudIncidents === "function") {
-      await window.clearAllCloudIncidents("CONFIRM RESET").catch(e => console.warn(e));
+      try {
+        await window.clearAllCloudIncidents("CONFIRM RESET");
+      } catch (e) {
+        console.warn("Cloud clear logs warning:", e);
+      }
     }
 
     renderRecordsTable();
@@ -5432,15 +5568,19 @@ window.executeDestructiveActionConfirmed = async function() {
 
   } else if (pendingDestructiveAction === 'RESET_DEFAULTS') {
     // 1. Master Settings backup snapshot
-    const backupSettings = JSON.stringify({
-      backupDate: new Date().toISOString(),
-      initiatedBy: user.username,
-      machines: YOKOHAMA_MACHINES,
-      areas: YOKOHAMA_AREAS,
-      categories: masterCategories,
-      technicians: technicians
-    }, null, 2);
-    downloadSnapshotFile(`Yokohama_MasterSettings_Backup_${timestamp}.json`, backupSettings);
+    try {
+      const backupSettings = JSON.stringify({
+        backupDate: new Date().toISOString(),
+        initiatedBy: user.username,
+        machines: YOKOHAMA_MACHINES,
+        areas: YOKOHAMA_AREAS,
+        categories: masterCategories,
+        technicians: technicians
+      }, null, 2);
+      downloadSnapshotFile(`Yokohama_MasterSettings_Backup_${timestamp}.json`, backupSettings);
+    } catch (err) {
+      console.warn("Failed to generate settings backup snapshot:", err);
+    }
 
     // 2. Reset to defaults
     localStorage.removeItem("YOKOHAMA_MASTER_MACHINES");
@@ -5457,12 +5597,16 @@ window.executeDestructiveActionConfirmed = async function() {
     masterNatures = [...INITIAL_NATURES_BACKUP];
     technicians = [...DEFAULT_TECHNICIANS];
     saveTechsToStorage();
-    initTechniciansDropdown();
-    saveMasterDataToStorage();
-    rebuildMachineMap();
-    initAreasDropdowns();
-    initMachineSelector();
-    renderMasterSettingsUI();
+    if (typeof window.syncAllMasterDataUI === "function") {
+      window.syncAllMasterDataUI();
+    } else {
+      initTechniciansDropdown();
+      saveMasterDataToStorage();
+      rebuildMachineMap();
+      initAreasDropdowns();
+      initMachineSelector();
+      renderMasterSettingsUI();
+    }
     showToast("Master Settings restored to factory defaults. Backup downloaded.", "success");
   }
 
@@ -5473,10 +5617,6 @@ window.clearAllIncidentLogs = function() {
   const user = (typeof getCurrentUser === "function") ? getCurrentUser() : null;
   if (!user || user.role !== "ADMIN") {
     showToast("Access Denied: Only Administrators can clear all incident logs.", "error");
-    return;
-  }
-  if (downtimeRecords.length === 0) {
-    showToast("Incident logs are already empty.", "info");
     return;
   }
   const modal = document.getElementById("confirmResetModal");

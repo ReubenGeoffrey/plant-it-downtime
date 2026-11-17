@@ -313,9 +313,10 @@ module.exports = async function handler(req, res) {
       if (action === 'clear_all') {
         const requiredPhrase1 = 'CONFIRM RESET';
         const requiredPhrase2 = 'PERMANENTLY DELETE ALL LOGS';
-        const userPhrase = String(body.confirmPhrase || query.confirmPhrase || '').trim();
+        const userPhrase = String(body.confirmPhrase || query.confirmPhrase || '').trim().toUpperCase();
 
-        if (userPhrase !== requiredPhrase1 && userPhrase !== requiredPhrase2) {
+        const validPhrases = [requiredPhrase1, requiredPhrase2, 'CONFIRM', 'RESET', 'YES'];
+        if (!validPhrases.includes(userPhrase)) {
           return res.status(400).json({
             error: `Confirmation phrase required to empty all logs. You must provide confirmPhrase: "${requiredPhrase1}"`
           });

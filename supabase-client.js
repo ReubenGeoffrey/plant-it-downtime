@@ -393,9 +393,12 @@ window.deleteCloudIncident = deleteCloudIncident;
 async function clearAllCloudIncidents(confirmPhrase = '') {
   const token = getSessionToken();
   const env = getRuntimeEnvironment();
+  const phrase = confirmPhrase || 'CONFIRM RESET';
+  let apiSuccess = false;
+
   if (token && env.isOnline) {
     try {
-      const res = await fetch('/api/incidents', {
+      const res = await fetch(`/api/incidents?action=clear_all&confirmPhrase=${encodeURIComponent(phrase)}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -403,11 +406,13 @@ async function clearAllCloudIncidents(confirmPhrase = '') {
         },
         body: JSON.stringify({
           action: 'clear_all',
-          confirmPhrase: confirmPhrase || 'PERMANENTLY DELETE ALL LOGS'
+          confirmPhrase: phrase
         })
       });
-      return res.ok;
-    } catch (e) {}
+      if (res.ok) apiSuccess = true;
+    } catch (e) {
+      console.warn("Vercel clear all incidents warning:", e);
+    }
   }
 
   try {
@@ -418,9 +423,9 @@ async function clearAllCloudIncidents(confirmPhrase = '') {
         'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
       }
     });
-    return res.ok;
+    return res.ok || apiSuccess;
   } catch (e) {
-    return false;
+    return apiSuccess;
   }
 }
 window.clearAllCloudIncidents = clearAllCloudIncidents;
