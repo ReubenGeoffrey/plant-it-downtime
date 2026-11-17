@@ -42,7 +42,7 @@
       document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"><\\/script>');
     }
   </script>
-  <script src="supabase-client.js?v=2.3"></script>
+  <script src="supabase-client.js?v=2.4"></script>
 
   <!-- Firebase Cloud SDK v10 (Firestore & Auth for Google AI Studio / Cloud Deployments) -->
   <script defer src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -2655,7 +2655,7 @@
           <label for="confirmResetInput" class="block text-xs font-bold text-slate-700">
             Type <span class="font-mono bg-slate-100 text-rose-600 px-1.5 py-0.5 rounded border border-slate-200 select-all">CONFIRM RESET</span> to proceed:
           </label>
-          <button type="button" onclick="quickFillConfirmReset()" class="px-2.5 py-1 text-[11px] font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg shrink-0 transition-colors cursor-pointer flex items-center gap-1" title="1-Click Fill Phrase">
+          <button type="button" onclick="if(typeof quickFillConfirmReset==='function'){quickFillConfirmReset();}else{const inp=document.getElementById('confirmResetInput');if(inp){inp.value='CONFIRM RESET';if(typeof handleConfirmResetInputChanged==='function')handleConfirmResetInputChanged();}}" class="px-2.5 py-1 text-[11px] font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg shrink-0 transition-colors cursor-pointer flex items-center gap-1" title="1-Click Fill Phrase">
             <i class="fa-solid fa-wand-magic-sparkles text-rose-600"></i> Auto-Fill
           </button>
         </div>
@@ -2733,7 +2733,7 @@
   </footer>
 
   <!-- Application Logic -->
-  <script src="app.js?v=5.4"></script>
+  <script src="app.js?v=5.5"></script>
   <!-- Enterprise Observability & Advanced Visualizations Engine -->
   <script src="observability-dashboard.js?v=1.0"></script>
 
